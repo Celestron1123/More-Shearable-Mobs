@@ -19,3 +19,63 @@ gradle-app.setting
 .project
 # JDT-specific (Eclipse Java Development Tools)
 .classpath
+
+# Compiled class files
+*.class
+
+# Log files
+*.log
+
+# BlueJ files
+*.ctxt
+
+# Mobile Tools for Java (J2ME)
+.mtj.tmp/
+
+# Package Files #
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# IntelliJ project files
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# VS Code settings
+.vscode/
+
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Local environment files
+.env
+*.local
+
+# Fabric-specific
+run/
+remappedSrc/
+remappedMod/
+
+# NBT Explorer temp files
+*.nbt.dat
+*.dat_old
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# JetBrains Rider
+.idea/
+
+# Dependency caches
+**/.gradle/
+**/build/
