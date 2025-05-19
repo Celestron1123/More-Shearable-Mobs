@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "shearable_cows",
+  "version": "${version}",
+  "name": "Shearable Cows",
+  "description": "A mod to let you shear cows for leather",
+  "authors": [],
+  "contact": {},
+  "license": "All-Rights-Reserved",
+  "icon": "assets/shearable_cows/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "fabric-datagen": [
+      "me.elijah.shearable_cows.client.Shearable_cowsDataGenerator"
+    ],
+    "client": [
+      "me.elijah.shearable_cows.client.Shearable_cowsClient"
+    ],
+    "main": [
+      "me.elijah.shearable_cows.Shearable_cows"
+    ]
+  },
+  "mixins": [
+    "shearable_cows.mixins.json",
+    {
+      "config": "shearable_cows.client.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric": "*",
+    "minecraft": "${minecraft_version}"
+  }
+}
