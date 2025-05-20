@@ -3,9 +3,13 @@
   "id": "shearable_cows",
   "version": "${version}",
   "name": "Shearable Cows",
-  "description": "A mod to let you shear cows for leather",
-  "authors": [],
-  "contact": {},
+  "description": "A lightweight mod that lets players shear cows for leather.",
+  "authors": [
+    "Elijah Potter"
+  ],
+  "contact": {
+    "homepage": "https://github.com/Celestron1123/Shearable-Cows"
+  },
   "license": "All-Rights-Reserved",
   "icon": "assets/shearable_cows/icon.png",
   "environment": "*",

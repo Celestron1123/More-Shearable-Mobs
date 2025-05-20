@@ -1,13 +1,15 @@
+/**
+ * Main Mixin methods for cow-shearing logic
+ *
+ * @author Elijah Potter
+ * @date 5/19/2025
+ */
+
 package me.elijah.shearable_cows.mixin;
 
-import net.minecraft.entity.EntityType;
 import net.minecraft.entity.ItemEntity;
-import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.Shearable;
 import net.minecraft.entity.data.DataTracker;
-import net.minecraft.entity.data.TrackedData;
-import net.minecraft.entity.data.TrackedDataHandlerRegistry;
-import net.minecraft.entity.passive.AnimalEntity;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.entity.passive.CowEntity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -21,42 +23,94 @@ import net.minecraft.util.Hand;
 import net.minecraft.world.World;
 
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import static me.elijah.shearable_cows.CowDataTrackers.*;
 import static net.minecraft.entity.LivingEntity.getSlotForHand;
-import static me.elijah.shearable_cows.CowDataTrackers.IS_SHEARED;
-import static me.elijah.shearable_cows.CowDataTrackers.REGROW_TIMER;
 
 @Mixin(CowEntity.class)
 public class MixinCowEntity implements Shearable {
 
+    /**
+     * Random number generator
+     */
     @Unique
     protected final Random random = Random.create();
 
+    /**
+     * Shortcut method for referencing this cow
+     *
+     * @return This cow
+     */
     @Unique
     private CowEntity thisCow() {
-        return (CowEntity)(Object)this;
+        return (CowEntity) (Object) this;
     }
 
+    /**
+     * From Shearable interface
+     *
+     * @return Whether a cow is in a shearable state
+     */
     @Override
     public boolean isShearable() {
         return thisCow().isAlive() && !isSheared() && !thisCow().isBaby();
     }
 
+    /**
+     * @return Whether a cow is in a butcherable state
+     */
     @Unique
-    public boolean isSheared(){
+    public boolean isButcherable() {
+        return thisCow().isAlive() && isSheared() && !isButchered() && !thisCow().isBaby();
+    }
+
+    /**
+     * @return Whether a cow is sheared
+     */
+    @Unique
+    public boolean isSheared() {
         return thisCow().getDataTracker().get(IS_SHEARED);
     }
 
+    /**
+     * @return Whether a cow is butchered
+     */
+    @Unique
+    public boolean isButchered() {
+        return thisCow().getDataTracker().get(IS_BUTCHERED);
+    }
+
+    /**
+     * Sets the sheared state of a cow, starts the shear countdown
+     *
+     * @param sheared What state the cow should enter
+     */
     @Unique
     public void setSheared(boolean sheared) {
         thisCow().getDataTracker().set(IS_SHEARED, sheared);
-        thisCow().getDataTracker().set(REGROW_TIMER, sampleRegrowTimer(random));
+        if (sheared) {
+            //TODO: restore this
+//            thisCow().getDataTracker().set(REGROW_TIMER, sampleRegrowTimer(random));
+            thisCow().getDataTracker().set(REGROW_TIMER, 100);
+        }
+    }
+
+    /**
+     * Sets the butcher state of a cow
+     *
+     * @param butchered Whether the cow is butchered
+     */
+    @Unique
+    public void setButchered(boolean butchered) {
+        thisCow().getDataTracker().set(IS_BUTCHERED, butchered);
+        if (butchered) {
+            //TODO: start a countdown
+        }
     }
 
     /**
@@ -82,33 +136,78 @@ public class MixinCowEntity implements Shearable {
         return (int) sample;
     }
 
+    /**
+     * Method that performs the actual shearing to the cow.
+     *
+     * @param world                The current world
+     * @param shearedSoundCategory The sound of the shear
+     * @param shears               The player's shears
+     */
     @Override
     public void sheared(ServerWorld world, SoundCategory shearedSoundCategory, ItemStack shears) {
-        world.playSoundFromEntity((PlayerEntity)null, thisCow(), SoundEvents.ENTITY_SHEEP_SHEAR, shearedSoundCategory, 1.0F, 1.0F);
+        world.playSoundFromEntity(null, thisCow(), SoundEvents.ENTITY_SHEEP_SHEAR, shearedSoundCategory, 1.0F, 1.0F);
         setSheared(true);
-        int dropCount;
-        float chance = thisCow().getRandom().nextFloat();
-        if (chance < 0.45f) {
-            dropCount = 1;
-        } else if (chance < 0.90f) {
-            dropCount = 2;
-        } else {
-            dropCount = 3;
-        }
+        int dropCount = determineDropCount();
         ItemStack leatherStack = new ItemStack(Items.LEATHER, dropCount);
         ItemEntity drop = new ItemEntity(world, thisCow().getX(), thisCow().getY() + 1, thisCow().getZ(), leatherStack);
         world.spawnEntity(drop);
-        drop.setVelocity(drop.getVelocity().add((double)((this.random.nextFloat() - this.random.nextFloat()) * 0.1F), (double)(this.random.nextFloat() * 0.05F), (double)((this.random.nextFloat() - this.random.nextFloat()) * 0.1F)));
+        drop.setVelocity(drop.getVelocity().add((this.random.nextFloat() - this.random.nextFloat()) * 0.1F, this.random.nextFloat() * 0.05F, (this.random.nextFloat() - this.random.nextFloat()) * 0.1F));
     }
 
+    /**
+     * Method that performs the actual butchering to the cow.
+     *
+     * @param world                The current world
+     * @param shearedSoundCategory The sound of the shear
+     * @param shears               The player's shears
+     */
+    @Unique
+    public void butchered(ServerWorld world, SoundCategory shearedSoundCategory, ItemStack shears) {
+        world.playSoundFromEntity(null, thisCow(), SoundEvents.ENTITY_SLIME_SQUISH, shearedSoundCategory, 1.0F, 1.0F);
+        setButchered(true);
+        int dropCount = determineDropCount();
+        ItemStack beefStack = new ItemStack(Items.BEEF, dropCount);
+        ItemEntity drop = new ItemEntity(world, thisCow().getX(), thisCow().getY() + 1, thisCow().getZ(), beefStack);
+        world.spawnEntity(drop);
+        drop.setVelocity(drop.getVelocity().add((this.random.nextFloat() - this.random.nextFloat()) * 0.1F, this.random.nextFloat() * 0.05F, (this.random.nextFloat() - this.random.nextFloat()) * 0.1F));
+    }
+
+    /**
+     * Determines how much leather/beef ought to be dropped
+     *
+     * @return integer of how much leather/beef to be dropped
+     */
+    @Unique
+    private int determineDropCount() {
+        float chance = thisCow().getRandom().nextFloat();
+        if (chance < 0.45f) {
+            return 1;
+        } else if (chance < 0.90f) {
+            return 2;
+        } else {
+            return 3;
+        }
+    }
+
+    /**
+     * Handles the logic for when a player interacts with a cow using shears
+     *
+     * @param player Current player
+     * @param hand   The player's hand
+     * @param cir    Reports success of method
+     */
     @Inject(method = "interactMob", at = @At("HEAD"), cancellable = true)
     private void onInteract(PlayerEntity player, Hand hand, CallbackInfoReturnable<ActionResult> cir) {
         ItemStack itemStack = player.getStackInHand(hand);
-        if (itemStack.isOf(Items.SHEARS)){
+        if (itemStack.isOf(Items.SHEARS)) {
             World var5 = thisCow().getWorld();
-            if (var5 instanceof ServerWorld){
-                ServerWorld serverWorld = (ServerWorld)var5;
-                if (this.isShearable()){
+            if (var5 instanceof ServerWorld serverWorld) {
+                if (this.isButcherable()) {
+                    this.butchered(serverWorld, SoundCategory.PLAYERS, itemStack);
+                    itemStack.damage(1, player, getSlotForHand(hand));
+                    player.swingHand(hand, true);
+                    cir.setReturnValue(ActionResult.SUCCESS);
+                } else if (this.isShearable()) {
                     this.sheared(serverWorld, SoundCategory.PLAYERS, itemStack);
                     itemStack.damage(1, player, getSlotForHand(hand));
                     player.swingHand(hand, true);

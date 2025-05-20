@@ -1,3 +1,10 @@
+/**
+ * Main initializer page for shearable cows
+ *
+ * @author Elijah Potter
+ * @date 5/19/2025
+ */
+
 package me.elijah.shearable_cows;
 
 import net.fabricmc.api.ModInitializer;
@@ -10,6 +17,8 @@ public class Shearable_cows implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        LOGGER.info("Cow mod activated. Hell yeah!");
+        Class<?> c = CowDataTrackers.class;
+        LOGGER.info("CowDataTrackers loaded: {}", c.getName());
+        LOGGER.info("Shearable cows tracker slot: {}", CowDataTrackers.IS_SHEARED);
     }
 }

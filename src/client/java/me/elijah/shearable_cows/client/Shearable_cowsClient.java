@@ -1,3 +1,10 @@
+/**
+ * Main client page for shearable cows
+ *
+ * @author Elijah Potter
+ * @date 5/19/2025
+ */
+
 package me.elijah.shearable_cows.client;
 
 import me.elijah.shearable_cows.client.renderer.ShearableCowEntityRenderer;
