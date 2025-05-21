@@ -9,7 +9,6 @@ package me.elijah.shearable_cows.mixin;
 
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.Shearable;
-import net.minecraft.entity.data.DataTracker;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.entity.passive.CowEntity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -26,7 +25,6 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import static me.elijah.shearable_cows.CowDataTrackers.*;
@@ -94,9 +92,7 @@ public class MixinCowEntity implements Shearable {
     public void setSheared(boolean sheared) {
         thisCow().getDataTracker().set(IS_SHEARED, sheared);
         if (sheared) {
-            //TODO: restore this
-//            thisCow().getDataTracker().set(REGROW_TIMER, sampleRegrowTimer(random));
-            thisCow().getDataTracker().set(REGROW_TIMER, 100);
+            thisCow().getDataTracker().set(REGROW_TIMER, sampleRegrowTimer(random));
         }
     }
 
@@ -109,7 +105,8 @@ public class MixinCowEntity implements Shearable {
     public void setButchered(boolean butchered) {
         thisCow().getDataTracker().set(IS_BUTCHERED, butchered);
         if (butchered) {
-            //TODO: start a countdown
+            thisCow().getDataTracker().set(REGEN_TIMER, sampleRegrowTimer(random));
+            thisCow().getDataTracker().set(REGROW_TIMER, sampleRegrowTimer(random));
         }
     }
 

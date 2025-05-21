@@ -31,4 +31,10 @@ public class CowDataTrackers {
      */
     public static final TrackedData<Integer> REGROW_TIMER =
             DataTracker.registerData(CowEntity.class, TrackedDataHandlerRegistry.INTEGER);
+
+    /**
+     * Integer timer for how long a cow has left to regrow its flesh
+     */
+    public static final TrackedData<Integer> REGEN_TIMER =
+            DataTracker.registerData(CowEntity.class, TrackedDataHandlerRegistry.INTEGER);
 }

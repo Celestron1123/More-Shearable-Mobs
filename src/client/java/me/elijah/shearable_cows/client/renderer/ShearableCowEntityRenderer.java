@@ -31,7 +31,7 @@ public class ShearableCowEntityRenderer extends AgeableMobEntityRenderer<CowEnti
 
     // Butchered texture
     private static final Identifier BUTCHERED_TEXTURE =
-            Identifier.of("shearable_cows", "textures/entity/cow/sheared_cow1.png");
+            Identifier.of("shearable_cows", "textures/entity/cow/skelecow.png");
 
     /**
      * Constructor
