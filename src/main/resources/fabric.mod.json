@@ -1,33 +1,29 @@
 {
   "schemaVersion": 1,
-  "id": "shearable_cows",
+  "id": "more_shearable_mobs",
   "version": "${version}",
-  "name": "Shearable Cows",
-  "description": "A lightweight mod that lets players shear cows for leather.",
-  "authors": [
-    "Elijah Potter"
-  ],
-  "contact": {
-    "homepage": "https://github.com/Celestron1123/Shearable-Cows"
-  },
+  "name": "More Shearable Mobs",
+  "description": "Allows the use of shears for gathering mob materials rather than slaughter alone.",
+  "authors": [],
+  "contact": {},
   "license": "All-Rights-Reserved",
-  "icon": "assets/shearable_cows/icon.png",
+  "icon": "assets/more_shearable_mobs/icon.png",
   "environment": "*",
   "entrypoints": {
     "fabric-datagen": [
-      "me.elijah.shearable_cows.client.Shearable_cowsDataGenerator"
+      "me.elijah.more_shearable_mobs.client.More_shearable_mobsDataGenerator"
     ],
     "client": [
-      "me.elijah.shearable_cows.client.Shearable_cowsClient"
+      "me.elijah.more_shearable_mobs.client.More_shearable_mobsClient"
     ],
     "main": [
-      "me.elijah.shearable_cows.Shearable_cows"
+      "me.elijah.more_shearable_mobs.More_shearable_mobs"
     ]
   },
   "mixins": [
-    "shearable_cows.mixins.json",
+    "more_shearable_mobs.mixins.json",
     {
-      "config": "shearable_cows.client.mixins.json",
+      "config": "more_shearable_mobs.client.mixins.json",
       "environment": "client"
     }
   ],

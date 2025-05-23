@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "me.elijah.more_shearable_mobs.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "MixinCowEntity",
+    "MixinLivingEntity"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

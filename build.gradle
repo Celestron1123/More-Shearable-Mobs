@@ -14,7 +14,7 @@ loom {
     splitEnvironmentSourceSets()
 
     mods {
-        "shearable_cows" {
+        "more_shearable_mobs" {
             sourceSet sourceSets.main
             sourceSet sourceSets.client
         }
