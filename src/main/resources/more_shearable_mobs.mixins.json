@@ -4,10 +4,16 @@
   "package": "me.elijah.more_shearable_mobs.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "MixinChickenEntity",
     "MixinCowEntity",
-    "MixinLivingEntity"
+    "MixinEatGrassGoal",
+    "MixinLivingEntity",
+    "MixinPigEntity",
+    "MixinSheepEntity"
   ],
   "injectors": {
     "defaultRequire": 1
-  }
+  },
+  "client": [
+  ]
 }

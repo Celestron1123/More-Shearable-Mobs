@@ -34,12 +34,6 @@ import static net.minecraft.entity.LivingEntity.getSlotForHand;
 public class MixinCowEntity implements Shearable {
 
     /**
-     * Random number generator
-     */
-    @Unique
-    protected final Random random = Random.create();
-
-    /**
      * Shortcut method for referencing this cow
      *
      * @return This cow
@@ -92,7 +86,7 @@ public class MixinCowEntity implements Shearable {
     public void setSheared(boolean sheared) {
         thisCow().getDataTracker().set(IS_COW_SHEARED, sheared);
         if (sheared) {
-            thisCow().getDataTracker().set(REGROW_COW_TIMER, sampleRegrowTimer(random));
+            thisCow().getDataTracker().set(REGROW_COW_TIMER, sampleRegrowTimer(thisCow().getRandom()));
         }
     }
 
@@ -105,8 +99,8 @@ public class MixinCowEntity implements Shearable {
     public void setButchered(boolean butchered) {
         thisCow().getDataTracker().set(IS_COW_BUTCHERED, butchered);
         if (butchered) {
-            thisCow().getDataTracker().set(REGEN_COW_TIMER, sampleRegrowTimer(random));
-            thisCow().getDataTracker().set(REGROW_COW_TIMER, sampleRegrowTimer(random));
+            thisCow().getDataTracker().set(REGEN_COW_TIMER, sampleRegrowTimer(thisCow().getRandom()));
+            thisCow().getDataTracker().set(REGROW_COW_TIMER, sampleRegrowTimer(thisCow().getRandom()));
         }
     }
 
@@ -148,7 +142,7 @@ public class MixinCowEntity implements Shearable {
         ItemStack leatherStack = new ItemStack(Items.LEATHER, dropCount);
         ItemEntity drop = new ItemEntity(world, thisCow().getX(), thisCow().getY() + 1, thisCow().getZ(), leatherStack);
         world.spawnEntity(drop);
-        drop.setVelocity(drop.getVelocity().add((this.random.nextFloat() - this.random.nextFloat()) * 0.1F, this.random.nextFloat() * 0.05F, (this.random.nextFloat() - this.random.nextFloat()) * 0.1F));
+        drop.setVelocity(drop.getVelocity().add((thisCow().getRandom().nextFloat() - thisCow().getRandom().nextFloat()) * 0.1F, thisCow().getRandom().nextFloat() * 0.05F, (thisCow().getRandom().nextFloat() - thisCow().getRandom().nextFloat()) * 0.1F));
     }
 
     /**
@@ -165,7 +159,7 @@ public class MixinCowEntity implements Shearable {
         ItemStack beefStack = new ItemStack(Items.BEEF, dropCount);
         ItemEntity drop = new ItemEntity(world, thisCow().getX(), thisCow().getY() + 1, thisCow().getZ(), beefStack);
         world.spawnEntity(drop);
-        drop.setVelocity(drop.getVelocity().add((this.random.nextFloat() - this.random.nextFloat()) * 0.1F, this.random.nextFloat() * 0.05F, (this.random.nextFloat() - this.random.nextFloat()) * 0.1F));
+        drop.setVelocity(drop.getVelocity().add((thisCow().getRandom().nextFloat() - thisCow().getRandom().nextFloat()) * 0.1F, thisCow().getRandom().nextFloat() * 0.05F, (thisCow().getRandom().nextFloat() - thisCow().getRandom().nextFloat()) * 0.1F));
     }
 
     /**

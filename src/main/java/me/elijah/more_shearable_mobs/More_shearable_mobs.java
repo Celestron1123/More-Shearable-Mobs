@@ -21,5 +21,8 @@ public class More_shearable_mobs implements ModInitializer {
         LOGGER.info("Initializing More_Shearable_Mobs");
         LOGGER.info("ShearDataTrackers loaded: {}", c.getName());
         LOGGER.info("Shearable cows tracker slot: {}", ShearDataTrackers.IS_COW_SHEARED);
+        LOGGER.info("Shearable chickens tracker slot: {}", ShearDataTrackers.IS_CHICK_SHEARED);
+        LOGGER.info("Shearable pigs tracker slot: {}", ShearDataTrackers.IS_PIG_SHEARED);
+        LOGGER.info("Shearable sheep tracker slot: {}", ShearDataTrackers.IS_SHEEP_BUTCHERED);
     }
 }

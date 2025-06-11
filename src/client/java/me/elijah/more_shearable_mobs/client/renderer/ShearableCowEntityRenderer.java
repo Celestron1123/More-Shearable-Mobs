@@ -8,6 +8,7 @@
 package me.elijah.more_shearable_mobs.client.renderer;
 
 import static me.elijah.more_shearable_mobs.ShearDataTrackers.*;
+
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.render.entity.AgeableMobEntityRenderer;
@@ -17,6 +18,9 @@ import net.minecraft.client.render.entity.model.EntityModelLayers;
 import net.minecraft.client.render.entity.state.LivingEntityRenderState;
 import net.minecraft.entity.passive.CowEntity;
 import net.minecraft.util.Identifier;
+
+import net.minecraft.client.render.entity.CowEntityRenderer;
+
 
 @Environment(EnvType.CLIENT)
 public class ShearableCowEntityRenderer extends AgeableMobEntityRenderer<CowEntity, LivingEntityRenderState, CowEntityModel> {
@@ -65,8 +69,8 @@ public class ShearableCowEntityRenderer extends AgeableMobEntityRenderer<CowEnti
     /**
      * Updates the cow's render state
      *
-     * @param cow This cow
-     * @param state The cow's state
+     * @param cow       This cow
+     * @param state     The cow's state
      * @param tickDelta Tick number
      */
     @Override
