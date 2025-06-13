@@ -1,6 +1,6 @@
 # More Shearable Mobs!
 
-A Minecraft 1.21.4 Fabric mod that reimagines how players gather animal-based resources — without the slaughter. Rather than killing passive farm animals, you can now shear them to obtain valuable items like leather, feathers, and even meat.
+A Minecraft Fabric mod that reimagines how players gather animal-based resources — without the slaughter. Rather than killing passive farm animals, you can now shear them to obtain valuable items like leather, feathers, and even meat.
 
 ## Features
 
@@ -25,7 +25,7 @@ A Minecraft 1.21.4 Fabric mod that reimagines how players gather animal-based re
 
 ## Compatibility
 
-- **Minecraft Version**: 1.21.4  
+- **Minecraft Versions**: 1.21.4 to 1.21.5
 - **Mod Loader**: [Fabric](https://fabricmc.net/)
 
 ## Installation
