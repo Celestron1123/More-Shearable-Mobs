@@ -30,7 +30,7 @@ A Minecraft 1.21.4 Fabric mod that reimagines how players gather animal-based re
 
 ## Installation
 
-1. Install [Fabric Loader](https://fabricmc.net/use/) for Minecraft 1.21.4.
+1. Install [Fabric Loader](https://fabricmc.net/use/) for Minecraft
 2. Download and install [Fabric API](https://modrinth.com/mod/fabric-api).
 3. Drop the `shearable_cows.jar` file into your `mods/` folder.
 4. Launch Minecraft and enjoy!
