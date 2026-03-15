@@ -46,7 +46,7 @@ All Rights Reserved.
 
 ## Links
 
-- 🏠 [Project Homepage](https://github.com/Celestron1123/Shearable-Cows)
+- 🏠 [Project Homepage](https://modrinth.com/mod/more-shearable-mobs)
 
 ---
 Feel free to report issues or contribute suggestions via GitHub!
