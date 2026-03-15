@@ -2,7 +2,7 @@
  * Custom data trackers for mobs
  *
  * @author Elijah Potter
- * @date 5/23/2025
+ * @date 3/15/2026
  */
 
 package me.elijah.more_shearable_mobs;
@@ -15,7 +15,7 @@ import net.minecraft.entity.passive.CowEntity;
 import net.minecraft.entity.passive.PigEntity;
 import net.minecraft.entity.passive.SheepEntity;
 
-public class ShearDataTrackers {
+public class    ShearDataTrackers {
 
     // ---------------- Cow Data Trackers ------------------------
 
@@ -74,14 +74,14 @@ public class ShearDataTrackers {
     /**
      * Boolean tracker for whether a pig has had its flesh removed
      */
-    public static final TrackedData<Boolean> IS_PIG_SHEARED =
+    public static final TrackedData<Boolean> IS_PIG_BUTCHERED =
             DataTracker.registerData(PigEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
 
 
     /**
      * Integer timer for how long a pig has left to regrow its flesh
      */
-    public static final TrackedData<Integer> REGROW_PIG_TIMER =
+    public static final TrackedData<Integer> REGEN_PIG_TIMER =
             DataTracker.registerData(PigEntity.class, TrackedDataHandlerRegistry.INTEGER);
 
     // ---------------- Sheep Data Trackers ------------------------

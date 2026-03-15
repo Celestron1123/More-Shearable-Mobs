@@ -1,16 +1,17 @@
 /**
- * Main Mixin methods for cow-shearing logic
+ * Main Mixin methods for abstract cow-shearing logic
  *
  * @author Elijah Potter
- * @date 5/19/2025
+ * @date 10/10/2025
  */
 
-package me.elijah.shearable_cows.mixin;
+package me.elijah.more_shearable_mobs.mixin;
 
+import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.Shearable;
+import net.minecraft.entity.passive.AbstractCowEntity;
 import net.minecraft.util.math.random.Random;
-import net.minecraft.entity.passive.CowEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
@@ -27,17 +28,10 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import static me.elijah.shearable_cows.CowDataTrackers.*;
-import static net.minecraft.entity.LivingEntity.getSlotForHand;
+import static me.elijah.more_shearable_mobs.ShearDataTrackers.*;
 
-@Mixin(CowEntity.class)
-public class MixinCowEntity implements Shearable {
-
-    /**
-     * Random number generator
-     */
-    @Unique
-    protected final Random random = Random.create();
+@Mixin(AbstractCowEntity.class)
+public class MixinAbstractCowEntity implements Shearable {
 
     /**
      * Shortcut method for referencing this cow
@@ -45,8 +39,8 @@ public class MixinCowEntity implements Shearable {
      * @return This cow
      */
     @Unique
-    private CowEntity thisCow() {
-        return (CowEntity) (Object) this;
+    private AbstractCowEntity thisCow() {
+        return (AbstractCowEntity) (Object) this;
     }
 
     /**
@@ -72,7 +66,7 @@ public class MixinCowEntity implements Shearable {
      */
     @Unique
     public boolean isSheared() {
-        return thisCow().getDataTracker().get(IS_SHEARED);
+        return thisCow().getDataTracker().get(IS_COW_SHEARED);
     }
 
     /**
@@ -80,7 +74,7 @@ public class MixinCowEntity implements Shearable {
      */
     @Unique
     public boolean isButchered() {
-        return thisCow().getDataTracker().get(IS_BUTCHERED);
+        return thisCow().getDataTracker().get(IS_COW_BUTCHERED);
     }
 
     /**
@@ -90,9 +84,9 @@ public class MixinCowEntity implements Shearable {
      */
     @Unique
     public void setSheared(boolean sheared) {
-        thisCow().getDataTracker().set(IS_SHEARED, sheared);
+        thisCow().getDataTracker().set(IS_COW_SHEARED, sheared);
         if (sheared) {
-            thisCow().getDataTracker().set(REGROW_TIMER, sampleRegrowTimer(random));
+            thisCow().getDataTracker().set(REGROW_COW_TIMER, sampleRegrowTimer(thisCow().getRandom()));
         }
     }
 
@@ -103,10 +97,10 @@ public class MixinCowEntity implements Shearable {
      */
     @Unique
     public void setButchered(boolean butchered) {
-        thisCow().getDataTracker().set(IS_BUTCHERED, butchered);
+        thisCow().getDataTracker().set(IS_COW_BUTCHERED, butchered);
         if (butchered) {
-            thisCow().getDataTracker().set(REGEN_TIMER, sampleRegrowTimer(random));
-            thisCow().getDataTracker().set(REGROW_TIMER, sampleRegrowTimer(random));
+            thisCow().getDataTracker().set(REGEN_COW_TIMER, sampleRegrowTimer(thisCow().getRandom()));
+            thisCow().getDataTracker().set(REGROW_COW_TIMER, sampleRegrowTimer(thisCow().getRandom()));
         }
     }
 
@@ -148,7 +142,7 @@ public class MixinCowEntity implements Shearable {
         ItemStack leatherStack = new ItemStack(Items.LEATHER, dropCount);
         ItemEntity drop = new ItemEntity(world, thisCow().getX(), thisCow().getY() + 1, thisCow().getZ(), leatherStack);
         world.spawnEntity(drop);
-        drop.setVelocity(drop.getVelocity().add((this.random.nextFloat() - this.random.nextFloat()) * 0.1F, this.random.nextFloat() * 0.05F, (this.random.nextFloat() - this.random.nextFloat()) * 0.1F));
+        drop.setVelocity(drop.getVelocity().add((thisCow().getRandom().nextFloat() - thisCow().getRandom().nextFloat()) * 0.1F, thisCow().getRandom().nextFloat() * 0.05F, (thisCow().getRandom().nextFloat() - thisCow().getRandom().nextFloat()) * 0.1F));
     }
 
     /**
@@ -156,17 +150,16 @@ public class MixinCowEntity implements Shearable {
      *
      * @param world                The current world
      * @param shearedSoundCategory The sound of the shear
-     * @param shears               The player's shears
      */
     @Unique
-    public void butchered(ServerWorld world, SoundCategory shearedSoundCategory, ItemStack shears) {
+    public void butchered(ServerWorld world, SoundCategory shearedSoundCategory) {
         world.playSoundFromEntity(null, thisCow(), SoundEvents.ENTITY_SLIME_SQUISH, shearedSoundCategory, 1.0F, 1.0F);
         setButchered(true);
         int dropCount = determineDropCount();
         ItemStack beefStack = new ItemStack(Items.BEEF, dropCount);
         ItemEntity drop = new ItemEntity(world, thisCow().getX(), thisCow().getY() + 1, thisCow().getZ(), beefStack);
         world.spawnEntity(drop);
-        drop.setVelocity(drop.getVelocity().add((this.random.nextFloat() - this.random.nextFloat()) * 0.1F, this.random.nextFloat() * 0.05F, (this.random.nextFloat() - this.random.nextFloat()) * 0.1F));
+        drop.setVelocity(drop.getVelocity().add((thisCow().getRandom().nextFloat() - thisCow().getRandom().nextFloat()) * 0.1F, thisCow().getRandom().nextFloat() * 0.05F, (thisCow().getRandom().nextFloat() - thisCow().getRandom().nextFloat()) * 0.1F));
     }
 
     /**
@@ -197,16 +190,16 @@ public class MixinCowEntity implements Shearable {
     private void onInteract(PlayerEntity player, Hand hand, CallbackInfoReturnable<ActionResult> cir) {
         ItemStack itemStack = player.getStackInHand(hand);
         if (itemStack.isOf(Items.SHEARS)) {
-            World var5 = thisCow().getWorld();
+            World var5 = thisCow().getEntityWorld();
             if (var5 instanceof ServerWorld serverWorld) {
                 if (this.isButcherable()) {
-                    this.butchered(serverWorld, SoundCategory.PLAYERS, itemStack);
-                    itemStack.damage(1, player, getSlotForHand(hand));
+                    this.butchered(serverWorld, SoundCategory.PLAYERS);
+                    itemStack.damage(1, player, hand == Hand.MAIN_HAND ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND);
                     player.swingHand(hand, true);
                     cir.setReturnValue(ActionResult.SUCCESS);
                 } else if (this.isShearable()) {
                     this.sheared(serverWorld, SoundCategory.PLAYERS, itemStack);
-                    itemStack.damage(1, player, getSlotForHand(hand));
+                    itemStack.damage(1, player, hand == Hand.MAIN_HAND ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND);
                     player.swingHand(hand, true);
                     cir.setReturnValue(ActionResult.SUCCESS);
                 }
@@ -214,3 +207,4 @@ public class MixinCowEntity implements Shearable {
         }
     }
 }
+

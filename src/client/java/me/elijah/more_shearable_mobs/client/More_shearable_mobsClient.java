@@ -2,18 +2,18 @@
  * Main client page for shearable mobs
  *
  * @author Elijah Potter
- * @date 5/23/2025
+ * @date 10/10/2025
  */
 
 package me.elijah.more_shearable_mobs.client;
 
-import me.elijah.more_shearable_mobs.client.renderer.ShearableChickenEntityRenderer;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.minecraft.entity.EntityType;
 import me.elijah.more_shearable_mobs.client.renderer.ShearableCowEntityRenderer;
 import me.elijah.more_shearable_mobs.client.renderer.ShearablePigEntityRenderer;
 import me.elijah.more_shearable_mobs.client.renderer.ShearableSheepEntityRenderer;
+import me.elijah.more_shearable_mobs.client.renderer.ShearableChickenEntityRenderer;
 
 public class More_shearable_mobsClient implements ClientModInitializer {
 

@@ -2,11 +2,12 @@
  * Main Mixin methods for chicken-shearing logic
  *
  * @author Elijah Potter
- * @date 5/23/2025
+ * @date 10/10/2025
  */
 
 package me.elijah.more_shearable_mobs.mixin;
 
+import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.Shearable;
 import net.minecraft.entity.passive.AnimalEntity;
@@ -29,7 +30,6 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import static me.elijah.more_shearable_mobs.ShearDataTrackers.*;
-import static net.minecraft.entity.LivingEntity.getSlotForHand;
 
 @Mixin(AnimalEntity.class)
 public class MixinChickenEntity implements Shearable {
@@ -206,16 +206,16 @@ public class MixinChickenEntity implements Shearable {
         if ((Object) this instanceof ChickenEntity chicken) {
             ItemStack itemStack = player.getStackInHand(hand);
             if (itemStack.isOf(Items.SHEARS)) {
-                World var5 = chicken.getWorld();
+                World var5 = chicken.getEntityWorld();
                 if (var5 instanceof ServerWorld serverWorld) {
                     if (this.isButcherable()) {
                         this.butchered(serverWorld, SoundCategory.PLAYERS);
-                        itemStack.damage(1, player, getSlotForHand(hand));
+                        itemStack.damage(1, player, hand == Hand.MAIN_HAND ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND);
                         player.swingHand(hand, true);
                         cir.setReturnValue(ActionResult.SUCCESS);
                     } else if (this.isShearable()) {
                         this.sheared(serverWorld, SoundCategory.PLAYERS, itemStack);
-                        itemStack.damage(1, player, getSlotForHand(hand));
+                        itemStack.damage(1, player, hand == Hand.MAIN_HAND ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND);
                         player.swingHand(hand, true);
                         cir.setReturnValue(ActionResult.SUCCESS);
                     }

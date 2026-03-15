@@ -2,13 +2,18 @@
  * Main Mixin methods for pig-shearing logic
  *
  * @author Elijah Potter
- * @date 5/23/2025
+ * @date 10/10/2025
  */
 
 package me.elijah.more_shearable_mobs.mixin;
 
+import me.elijah.more_shearable_mobs.More_shearable_mobs;
+import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.Shearable;
+import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.passive.PigEntity;
+import net.minecraft.storage.ReadView;
+import net.minecraft.storage.WriteView;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -25,10 +30,10 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import static me.elijah.more_shearable_mobs.ShearDataTrackers.*;
-import static net.minecraft.entity.LivingEntity.getSlotForHand;
 
 @Mixin(PigEntity.class)
 public class MixinPigEntity implements Shearable {
@@ -58,7 +63,7 @@ public class MixinPigEntity implements Shearable {
      */
     @Unique
     public boolean isSheared() {
-        return thisPig().getDataTracker().get(IS_PIG_SHEARED);
+        return thisPig().getDataTracker().get(IS_PIG_BUTCHERED);
     }
 
     /**
@@ -68,9 +73,9 @@ public class MixinPigEntity implements Shearable {
      */
     @Unique
     public void setSheared(boolean sheared) {
-        thisPig().getDataTracker().set(IS_PIG_SHEARED, sheared);
+        thisPig().getDataTracker().set(IS_PIG_BUTCHERED, sheared);
         if (sheared) {
-            thisPig().getDataTracker().set(REGROW_PIG_TIMER, sampleRegrowTimer(thisPig().getRandom()));
+            thisPig().getDataTracker().set(REGEN_PIG_TIMER, sampleRegrowTimer(thisPig().getRandom()));
         }
     }
 
@@ -143,15 +148,61 @@ public class MixinPigEntity implements Shearable {
     private void onInteract(PlayerEntity player, Hand hand, CallbackInfoReturnable<ActionResult> cir) {
         ItemStack itemStack = player.getStackInHand(hand);
         if (itemStack.isOf(Items.SHEARS)) {
-            World var5 = thisPig().getWorld();
+            World var5 = thisPig().getEntityWorld();
             if (var5 instanceof ServerWorld serverWorld) {
                 if (this.isShearable()) {
                     this.sheared(serverWorld, SoundCategory.PLAYERS, itemStack);
-                    itemStack.damage(1, player, getSlotForHand(hand));
+                    itemStack.damage(1, player, hand == Hand.MAIN_HAND ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND);
                     player.swingHand(hand, true);
                     cir.setReturnValue(ActionResult.SUCCESS);
                 }
             }
+        }
+    }
+
+    /**
+     * Adds custom data trackers to piggies hehe
+     *
+     * @param builder Data tracker
+     * @param ci      Unused
+     */
+    @Inject(method = "initDataTracker", at = @At("TAIL"))
+    private void injectMobShearedTracker(DataTracker.Builder builder, CallbackInfo ci) {
+        builder.add(IS_PIG_BUTCHERED, false);
+        builder.add(REGEN_PIG_TIMER, 0);
+    }
+
+    /**
+     * Writes custom NBT data about pigs and their shear-states
+     * to persist between loads
+     *
+     * @param nbt NBT writer
+     * @param ci  Unused
+     */
+    @Inject(method = "writeCustomData", at = @At("TAIL"))
+    private void onWriteNbt(WriteView nbt, CallbackInfo ci) {
+        try {
+            nbt.putBoolean("IsPigButchered", thisPig().getDataTracker().get(IS_PIG_BUTCHERED));
+            nbt.putInt("RegenPigTicks", thisPig().getDataTracker().get(REGEN_PIG_TIMER));
+        } catch (Exception e) {
+            More_shearable_mobs.LOGGER.error("Failed to write pig NBT", e);
+        }
+    }
+
+    /**
+     * Reads custom NBT data about pigs and their shear-states
+     * to persist between loads
+     *
+     * @param nbt NBT writer
+     * @param ci  Unused
+     */
+    @Inject(method = "readCustomData", at = @At("TAIL"))
+    private void onReadNbt(ReadView nbt, CallbackInfo ci) {
+        try {
+            thisPig().getDataTracker().set(IS_PIG_BUTCHERED, nbt.getBoolean("IsPigButchered", false));
+            thisPig().getDataTracker().set(REGEN_PIG_TIMER, nbt.getInt("RegenPigTicks", 0));
+        } catch (Exception e) {
+            More_shearable_mobs.LOGGER.error("Failed to read pig NBT", e);
         }
     }
 }

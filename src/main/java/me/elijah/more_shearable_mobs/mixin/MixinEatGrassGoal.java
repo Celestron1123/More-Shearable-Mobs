@@ -2,7 +2,7 @@
  * Stops sheep from eating grass while butchered
  *
  * @author: Elijah Potter
- * @date: 6/5/2025
+ * @date: 10/10/2025
  */
 
 package me.elijah.more_shearable_mobs.mixin;

@@ -2,16 +2,18 @@
  * Main Mixin methods for sheep-butchering logic
  *
  * @author Elijah Potter
- * @date 5/23/2025
+ * @date 10/10/2025
  */
 
 package me.elijah.more_shearable_mobs.mixin;
 
 import me.elijah.more_shearable_mobs.More_shearable_mobs;
+import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.passive.SheepEntity;
-import net.minecraft.nbt.NbtCompound;
+import net.minecraft.storage.ReadView;
+import net.minecraft.storage.WriteView;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
@@ -31,7 +33,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import static me.elijah.more_shearable_mobs.ShearDataTrackers.*;
-import static net.minecraft.entity.LivingEntity.getSlotForHand;
 
 @Mixin(SheepEntity.class)
 public class MixinSheepEntity {
@@ -143,11 +144,11 @@ public class MixinSheepEntity {
     private void onInteract(PlayerEntity player, Hand hand, CallbackInfoReturnable<ActionResult> cir) {
         ItemStack itemStack = player.getStackInHand(hand);
         if (itemStack.isOf(Items.SHEARS)) {
-            World var5 = thisSheep().getWorld();
+            World var5 = thisSheep().getEntityWorld();
             if (var5 instanceof ServerWorld serverWorld) {
                 if (this.isButcherable()) {
                     this.butchered(serverWorld, SoundCategory.PLAYERS);
-                    itemStack.damage(1, player, getSlotForHand(hand));
+                    itemStack.damage(1, player, hand == Hand.MAIN_HAND ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND);
                     player.swingHand(hand, true);
                     cir.setReturnValue(ActionResult.SUCCESS);
                 }
@@ -174,8 +175,8 @@ public class MixinSheepEntity {
      * @param nbt NBT writer
      * @param ci  Unused
      */
-    @Inject(method = "writeCustomDataToNbt", at = @At("TAIL"))
-    private void onWriteNbt(NbtCompound nbt, CallbackInfo ci) {
+    @Inject(method = "writeCustomData", at = @At("TAIL"))
+    private void onWriteNbt(WriteView nbt, CallbackInfo ci) {
         try {
             nbt.putBoolean("IsSheepButchered", thisSheep().getDataTracker().get(IS_SHEEP_BUTCHERED));
             nbt.putInt("RegenSheepTicks", thisSheep().getDataTracker().get(REGEN_SHEEP_TIMER));
@@ -191,15 +192,11 @@ public class MixinSheepEntity {
      * @param nbt NBT writer
      * @param ci  Unused
      */
-    @Inject(method = "readCustomDataFromNbt", at = @At("TAIL"))
-    private void onReadNbt(NbtCompound nbt, CallbackInfo ci) {
+    @Inject(method = "readCustomData", at = @At("TAIL"))
+    private void onReadNbt(ReadView nbt, CallbackInfo ci) {
         try {
-            if (nbt.contains("IsSheepButchered")) {
-                thisSheep().getDataTracker().set(IS_SHEEP_BUTCHERED, nbt.getBoolean("IsSheepButchered"));
-            }
-            if (nbt.contains("RegenSheepTicks")) {
-                thisSheep().getDataTracker().set(REGEN_SHEEP_TIMER, nbt.getInt("RegenSheepTicks"));
-            }
+            thisSheep().getDataTracker().set(IS_SHEEP_BUTCHERED, nbt.getBoolean("IsSheepButchered", false));
+            thisSheep().getDataTracker().set(REGEN_SHEEP_TIMER, nbt.getInt("RegenSheepTicks", 0));
         } catch (Exception e) {
             More_shearable_mobs.LOGGER.error("Failed to read sheep NBT", e);
         }

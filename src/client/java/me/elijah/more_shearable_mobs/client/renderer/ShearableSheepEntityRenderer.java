@@ -2,7 +2,7 @@
  * Sheep renderer for shearable sheep
  *
  * @auther Elijah Potter
- * @date 5/19/2025
+ * @date 10/10/2025
  */
 
 package me.elijah.more_shearable_mobs.client.renderer;
@@ -28,7 +28,7 @@ public class ShearableSheepEntityRenderer extends AgeableMobEntityRenderer<Sheep
 
     // Normal texture
     private static final Identifier NORMAL_TEXTURE =
-            Identifier.of("minecraft", "textures/entity/sheep/sheep.png");
+            Identifier.ofVanilla("textures/entity/sheep/sheep.png");
 
     // Butchered texture
     private static final Identifier BUTCHERED_TEXTURE =
@@ -47,6 +47,7 @@ public class ShearableSheepEntityRenderer extends AgeableMobEntityRenderer<Sheep
                 0.7F
         );
         this.addFeature(new SheepWoolFeatureRenderer(this, context.getEntityModels()));
+        this.addFeature(new BetterUndercoatRenderer(this, context.getEntityModels()));
     }
 
     /**
@@ -78,7 +79,7 @@ public class ShearableSheepEntityRenderer extends AgeableMobEntityRenderer<Sheep
         state.neckAngle = sheep.getNeckAngle(tickDelta);
         state.sheared = sheep.isSheared();
         state.color = sheep.getColor();
-        state.id = sheep.getId();
+        state.rainbow = nameEquals(sheep, "jeb_");
         ((ShearableSheepRenderState) state).sheepEntity = sheep;
     }
 
