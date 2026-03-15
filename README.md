@@ -1,6 +1,6 @@
 # More Shearable Mobs!
 
-A Minecraft Fabric mod that reimagines how players gather animal-based resources — without the slaughter. Rather than killing passive farm animals, you can now shear them to obtain valuable items like leather, feathers, and even meat.
+A Minecraft Fabric mod that augments how players gather animal-based resources. Rather than killing passive farm animals, you can now shear them to obtain valuable items like leather, feathers, and even meat.
 
 ## Features
 
@@ -8,7 +8,7 @@ A Minecraft Fabric mod that reimagines how players gather animal-based resources
   Shear cows, sheep, pigs, and chickens to gather resources in a non-lethal way.
 
 - **Custom Textures for Each Animal State**  
-  Each animal has custom-made textures (by the mod author) that visually reflect their sheared and "meatless" states.
+  Each animal has custom-made textures (by me!) that visually reflect their sheared and "meatless" states.
 
 - **Shear in Stages**  
   - **First Shear**: Removes outer skin/hide (e.g., leather from cows).
