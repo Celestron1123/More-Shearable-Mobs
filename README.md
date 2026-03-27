@@ -25,7 +25,7 @@ A Minecraft Fabric mod that augments how players gather animal-based resources. 
 
 ## Compatibility
 
-- **Minecraft Versions**: 1.21.4 to 1.21.11
+- **Minecraft Versions**: 1.21.4 through 26.1
 - **Mod Loader**: [Fabric](https://fabricmc.net/)
 
 ## Installation
