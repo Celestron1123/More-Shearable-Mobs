@@ -2,14 +2,14 @@
  * Main client page for shearable mobs
  *
  * @author Elijah Potter
- * @date 10/10/2025
+ * @date 03/26/2026
  */
 
 package me.elijah.more_shearable_mobs.client;
 
 import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
-import net.minecraft.entity.EntityType;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.client.renderer.entity.EntityRenderers;
 import me.elijah.more_shearable_mobs.client.renderer.ShearableCowEntityRenderer;
 import me.elijah.more_shearable_mobs.client.renderer.ShearablePigEntityRenderer;
 import me.elijah.more_shearable_mobs.client.renderer.ShearableSheepEntityRenderer;
@@ -19,9 +19,9 @@ public class More_shearable_mobsClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-        EntityRendererRegistry.register(EntityType.COW, ShearableCowEntityRenderer::new);
-        EntityRendererRegistry.register(EntityType.CHICKEN, ShearableChickenEntityRenderer::new);
-        EntityRendererRegistry.register(EntityType.PIG, ShearablePigEntityRenderer::new);
-        EntityRendererRegistry.register(EntityType.SHEEP, ShearableSheepEntityRenderer::new);
+        EntityRenderers.register(EntityType.COW, ShearableCowEntityRenderer::new);
+        EntityRenderers.register(EntityType.CHICKEN, ShearableChickenEntityRenderer::new);
+        EntityRenderers.register(EntityType.PIG, ShearablePigEntityRenderer::new);
+        EntityRenderers.register(EntityType.SHEEP, ShearableSheepEntityRenderer::new);
     }
 }

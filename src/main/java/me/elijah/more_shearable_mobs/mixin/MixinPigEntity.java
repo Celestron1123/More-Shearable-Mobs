@@ -2,30 +2,31 @@
  * Main Mixin methods for pig-shearing logic
  *
  * @author Elijah Potter
- * @date 10/10/2025
+ * @date 03/26/2026
  */
 
 package me.elijah.more_shearable_mobs.mixin;
 
 import me.elijah.more_shearable_mobs.More_shearable_mobs;
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.Shearable;
-import net.minecraft.entity.data.DataTracker;
-import net.minecraft.entity.passive.PigEntity;
-import net.minecraft.storage.ReadView;
-import net.minecraft.storage.WriteView;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.world.World;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.Shearable;
+import net.minecraft.world.entity.animal.pig.Pig;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 
+import org.jetbrains.annotations.NotNull;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -35,7 +36,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import static me.elijah.more_shearable_mobs.ShearDataTrackers.*;
 
-@Mixin(PigEntity.class)
+@Mixin(Pig.class)
 public class MixinPigEntity implements Shearable {
 
     /**
@@ -44,8 +45,8 @@ public class MixinPigEntity implements Shearable {
      * @return This pig
      */
     @Unique
-    private PigEntity thisPig() {
-        return (PigEntity) (Object) this;
+    private Pig thisPig() {
+        return (Pig) (Object) this;
     }
 
     /**
@@ -54,7 +55,7 @@ public class MixinPigEntity implements Shearable {
      * @return Whether a pig is in a shearable state
      */
     @Override
-    public boolean isShearable() {
+    public boolean readyForShearing() {
         return thisPig().isAlive() && !isSheared() && !thisPig().isBaby();
     }
 
@@ -63,7 +64,7 @@ public class MixinPigEntity implements Shearable {
      */
     @Unique
     public boolean isSheared() {
-        return thisPig().getDataTracker().get(IS_PIG_BUTCHERED);
+        return thisPig().getEntityData().get(IS_PIG_BUTCHERED);
     }
 
     /**
@@ -73,9 +74,9 @@ public class MixinPigEntity implements Shearable {
      */
     @Unique
     public void setSheared(boolean sheared) {
-        thisPig().getDataTracker().set(IS_PIG_BUTCHERED, sheared);
+        thisPig().getEntityData().set(IS_PIG_BUTCHERED, sheared);
         if (sheared) {
-            thisPig().getDataTracker().set(REGEN_PIG_TIMER, sampleRegrowTimer(thisPig().getRandom()));
+            thisPig().getEntityData().set(REGEN_PIG_TIMER, sampleRegrowTimer(thisPig().getRandom()));
         }
     }
 
@@ -91,7 +92,7 @@ public class MixinPigEntity implements Shearable {
      * @return an integer that follows the prescribed bell curve
      */
     @Unique
-    private int sampleRegrowTimer(Random random) {
+    private int sampleRegrowTimer(RandomSource random) {
         double mean = 1000;  // 50 seconds = 1000 ticks
         double stdDev = 300;
         double sample;
@@ -110,14 +111,14 @@ public class MixinPigEntity implements Shearable {
      * @param shears               The player's shears
      */
     @Override
-    public void sheared(ServerWorld world, SoundCategory shearedSoundCategory, ItemStack shears) {
-        world.playSoundFromEntity(null, thisPig(), SoundEvents.ENTITY_SLIME_SQUISH, shearedSoundCategory, 1.0F, 1.0F);
+    public void shear(ServerLevel world, @NotNull SoundSource shearedSoundCategory, @NotNull ItemStack shears) {
+        world.playSound(null, thisPig(), SoundEvents.SLIME_SQUISH, shearedSoundCategory, 1.0F, 1.0F);
         setSheared(true);
         int dropCount = determineDropCount();
         ItemStack leatherStack = new ItemStack(Items.PORKCHOP, dropCount);
         ItemEntity drop = new ItemEntity(world, thisPig().getX(), thisPig().getY() + 1, thisPig().getZ(), leatherStack);
-        world.spawnEntity(drop);
-        drop.setVelocity(drop.getVelocity().add((thisPig().getRandom().nextFloat() - thisPig().getRandom().nextFloat()) * 0.1F, thisPig().getRandom().nextFloat() * 0.05F, (thisPig().getRandom().nextFloat() - thisPig().getRandom().nextFloat()) * 0.1F));
+        world.addFreshEntity(drop);
+        drop.setDeltaMovement(drop.getDeltaMovement().add((thisPig().getRandom().nextFloat() - thisPig().getRandom().nextFloat()) * 0.1F, thisPig().getRandom().nextFloat() * 0.05F, (thisPig().getRandom().nextFloat() - thisPig().getRandom().nextFloat()) * 0.1F));
     }
 
     /**
@@ -144,17 +145,17 @@ public class MixinPigEntity implements Shearable {
      * @param hand   The player's hand
      * @param cir    Reports success of method
      */
-    @Inject(method = "interactMob", at = @At("HEAD"), cancellable = true)
-    private void onInteract(PlayerEntity player, Hand hand, CallbackInfoReturnable<ActionResult> cir) {
-        ItemStack itemStack = player.getStackInHand(hand);
-        if (itemStack.isOf(Items.SHEARS)) {
-            World var5 = thisPig().getEntityWorld();
-            if (var5 instanceof ServerWorld serverWorld) {
-                if (this.isShearable()) {
-                    this.sheared(serverWorld, SoundCategory.PLAYERS, itemStack);
-                    itemStack.damage(1, player, hand == Hand.MAIN_HAND ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND);
-                    player.swingHand(hand, true);
-                    cir.setReturnValue(ActionResult.SUCCESS);
+    @Inject(method = "mobInteract", at = @At("HEAD"), cancellable = true, remap = false)
+    private void onInteract(Player player, InteractionHand hand, CallbackInfoReturnable<InteractionResult> cir) {
+        ItemStack itemStack = player.getItemInHand(hand);
+        if (itemStack.is(Items.SHEARS)) {
+            Level var5 = thisPig().level();
+            if (var5 instanceof ServerLevel serverLevel) {
+                if (this.readyForShearing()) {
+                    this.shear(serverLevel, SoundSource.PLAYERS, itemStack);
+                    itemStack.hurtAndBreak(1, player, hand == InteractionHand.MAIN_HAND ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND);
+                    player.swing(hand, true);
+                    cir.setReturnValue(InteractionResult.SUCCESS);
                 }
             }
         }
@@ -166,10 +167,10 @@ public class MixinPigEntity implements Shearable {
      * @param builder Data tracker
      * @param ci      Unused
      */
-    @Inject(method = "initDataTracker", at = @At("TAIL"))
-    private void injectMobShearedTracker(DataTracker.Builder builder, CallbackInfo ci) {
-        builder.add(IS_PIG_BUTCHERED, false);
-        builder.add(REGEN_PIG_TIMER, 0);
+    @Inject(method = "defineSynchedData", at = @At("TAIL"), remap = false)
+    private void injectCowShearedTracker(SynchedEntityData.Builder builder, CallbackInfo ci) {
+        builder.define(IS_PIG_BUTCHERED, false);
+        builder.define(REGEN_PIG_TIMER, 0);
     }
 
     /**
@@ -179,11 +180,11 @@ public class MixinPigEntity implements Shearable {
      * @param nbt NBT writer
      * @param ci  Unused
      */
-    @Inject(method = "writeCustomData", at = @At("TAIL"))
-    private void onWriteNbt(WriteView nbt, CallbackInfo ci) {
+    @Inject(method = "addAdditionalSaveData", at = @At("TAIL"), remap = false)
+    private void onWriteCustomData(ValueOutput nbt, CallbackInfo ci) {
         try {
-            nbt.putBoolean("IsPigButchered", thisPig().getDataTracker().get(IS_PIG_BUTCHERED));
-            nbt.putInt("RegenPigTicks", thisPig().getDataTracker().get(REGEN_PIG_TIMER));
+            nbt.putBoolean("IsPigButchered", thisPig().getEntityData().get(IS_PIG_BUTCHERED));
+            nbt.putInt("RegenPigTicks", thisPig().getEntityData().get(REGEN_PIG_TIMER));
         } catch (Exception e) {
             More_shearable_mobs.LOGGER.error("Failed to write pig NBT", e);
         }
@@ -196,11 +197,11 @@ public class MixinPigEntity implements Shearable {
      * @param nbt NBT writer
      * @param ci  Unused
      */
-    @Inject(method = "readCustomData", at = @At("TAIL"))
-    private void onReadNbt(ReadView nbt, CallbackInfo ci) {
+    @Inject(method = "readAdditionalSaveData", at = @At("TAIL"), remap = false)
+    private void onReadNbt(ValueInput nbt, CallbackInfo ci) {
         try {
-            thisPig().getDataTracker().set(IS_PIG_BUTCHERED, nbt.getBoolean("IsPigButchered", false));
-            thisPig().getDataTracker().set(REGEN_PIG_TIMER, nbt.getInt("RegenPigTicks", 0));
+            thisPig().getEntityData().set(IS_PIG_BUTCHERED, nbt.getBooleanOr("IsPigButchered", false));
+            thisPig().getEntityData().set(REGEN_PIG_TIMER, nbt.getIntOr("RegenPigTicks", 0));
         } catch (Exception e) {
             More_shearable_mobs.LOGGER.error("Failed to read pig NBT", e);
         }

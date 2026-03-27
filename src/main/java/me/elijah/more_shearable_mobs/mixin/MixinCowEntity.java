@@ -2,16 +2,17 @@
  * Main Mixin methods for cow-shearing logic
  *
  * @author Elijah Potter
- * @date 10/10/2025
+ * @date 03/25/2026
  */
 
 package me.elijah.more_shearable_mobs.mixin;
 
 import me.elijah.more_shearable_mobs.More_shearable_mobs;
-import net.minecraft.entity.data.DataTracker;
-import net.minecraft.entity.passive.CowEntity;
-import net.minecraft.storage.ReadView;
-import net.minecraft.storage.WriteView;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.world.entity.animal.cow.Cow;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
+
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -20,7 +21,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import static me.elijah.more_shearable_mobs.ShearDataTrackers.*;
 
-@Mixin(CowEntity.class)
+@Mixin(Cow.class)
 public class MixinCowEntity {
 
     /**
@@ -29,8 +30,8 @@ public class MixinCowEntity {
      * @return This cow
      */
     @Unique
-    private CowEntity thisCow() {
-        return (CowEntity) (Object) this;
+    private Cow thisCow() {
+        return (Cow) (Object) this;
     }
 
     /**
@@ -39,12 +40,12 @@ public class MixinCowEntity {
      * @param builder Data tracker
      * @param ci      Unused
      */
-    @Inject(method = "initDataTracker", at = @At("TAIL"))
-    private void injectCowShearedTracker(DataTracker.Builder builder, CallbackInfo ci) {
-        builder.add(IS_COW_SHEARED, false);
-        builder.add(IS_COW_BUTCHERED, false);
-        builder.add(REGROW_COW_TIMER, 0);
-        builder.add(REGEN_COW_TIMER, 0);
+    @Inject(method = "defineSynchedData", at = @At("TAIL"), remap = false)
+    private void injectCowShearedTracker(SynchedEntityData.Builder builder, CallbackInfo ci) {
+        builder.define(IS_COW_SHEARED, false);
+        builder.define(IS_COW_BUTCHERED, false);
+        builder.define(REGROW_COW_TIMER, 0);
+        builder.define(REGEN_COW_TIMER, 0);
     }
 
     /**
@@ -54,13 +55,13 @@ public class MixinCowEntity {
      * @param nbt NBT writer
      * @param ci  Unused
      */
-    @Inject(method = "writeCustomData", at = @At("TAIL"))
-    private void onWriteCustomData(WriteView nbt, CallbackInfo ci) {
+    @Inject(method = "addAdditionalSaveData", at = @At("TAIL"), remap = false)
+    private void onWriteCustomData(ValueOutput nbt, CallbackInfo ci) {
         try {
-            nbt.putBoolean("IsCowSheared", thisCow().getDataTracker().get(IS_COW_SHEARED));
-            nbt.putBoolean("IsCowButchered", thisCow().getDataTracker().get(IS_COW_BUTCHERED));
-            nbt.putInt("RegrowCowTicks", thisCow().getDataTracker().get(REGROW_COW_TIMER));
-            nbt.putInt("RegenCowTicks", thisCow().getDataTracker().get(REGEN_COW_TIMER));
+            nbt.putBoolean("IsCowSheared", thisCow().getEntityData().get(IS_COW_SHEARED));
+            nbt.putBoolean("IsCowButchered", thisCow().getEntityData().get(IS_COW_BUTCHERED));
+            nbt.putInt("RegrowCowTicks", thisCow().getEntityData().get(REGROW_COW_TIMER));
+            nbt.putInt("RegenCowTicks", thisCow().getEntityData().get(REGEN_COW_TIMER));
         } catch (Exception e) {
             More_shearable_mobs.LOGGER.error("Failed to write cow NBT", e);
         }
@@ -73,13 +74,13 @@ public class MixinCowEntity {
      * @param nbt NBT writer
      * @param ci  Unused
      */
-    @Inject(method = "readCustomData", at = @At("TAIL"))
-    private void onReadNbt(ReadView nbt, CallbackInfo ci) {
+    @Inject(method = "readAdditionalSaveData", at = @At("TAIL"), remap = false)
+    private void onReadNbt(ValueInput nbt, CallbackInfo ci) {
         try {
-            thisCow().getDataTracker().set(IS_COW_SHEARED, nbt.getBoolean("IsCowSheared", false));
-            thisCow().getDataTracker().set(IS_COW_BUTCHERED, nbt.getBoolean("IsCowButchered", false));
-            thisCow().getDataTracker().set(REGROW_COW_TIMER, nbt.getInt("RegrowCowTicks", 0));
-            thisCow().getDataTracker().set(REGEN_COW_TIMER, nbt.getInt("RegenCowTicks", 0));
+            thisCow().getEntityData().set(IS_COW_SHEARED, nbt.getBooleanOr("IsCowSheared", false));
+            thisCow().getEntityData().set(IS_COW_BUTCHERED, nbt.getBooleanOr("IsCowButchered", false));
+            thisCow().getEntityData().set(REGROW_COW_TIMER, nbt.getIntOr("RegrowCowTicks", 0));
+            thisCow().getEntityData().set(REGEN_COW_TIMER, nbt.getIntOr("RegenCowTicks", 0));
         } catch (Exception e) {
             More_shearable_mobs.LOGGER.error("Failed to read cow NBT", e);
         }

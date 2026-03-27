@@ -2,7 +2,7 @@
  * Sheep renderer for shearable sheep
  *
  * @auther Elijah Potter
- * @date 10/10/2025
+ * @date 03/26/2026
  */
 
 package me.elijah.more_shearable_mobs.client.renderer;
@@ -11,76 +11,60 @@ import static me.elijah.more_shearable_mobs.ShearDataTrackers.*;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.render.entity.AgeableMobEntityRenderer;
-import net.minecraft.client.render.entity.EntityRendererFactory;
-import net.minecraft.client.render.entity.model.EntityModelLayers;
-import net.minecraft.client.render.entity.model.SheepEntityModel;
-import net.minecraft.client.render.entity.state.SheepEntityRenderState;
-import net.minecraft.entity.passive.SheepEntity;
-import net.minecraft.util.Identifier;
-
-// For refs
-import net.minecraft.client.render.entity.SheepEntityRenderer;
-import net.minecraft.client.render.entity.feature.SheepWoolFeatureRenderer;
+import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.client.renderer.entity.SheepRenderer;
+import net.minecraft.client.renderer.entity.state.SheepRenderState;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.animal.sheep.Sheep;
 
 @Environment(EnvType.CLIENT)
-public class ShearableSheepEntityRenderer extends AgeableMobEntityRenderer<SheepEntity, SheepEntityRenderState, SheepEntityModel> {
-
-    // Normal texture
-    private static final Identifier NORMAL_TEXTURE =
-            Identifier.ofVanilla("textures/entity/sheep/sheep.png");
+public class ShearableSheepEntityRenderer extends SheepRenderer {
 
     // Butchered texture
     private static final Identifier BUTCHERED_TEXTURE =
-            Identifier.of("more_shearable_mobs", "textures/entity/sheep/skeleshep_wooled.png");
+            Identifier.fromNamespaceAndPath("more_shearable_mobs", "textures/entity/sheep/skeleshep_wooled.png");
 
     /**
      * Constructor
      *
      * @param context Yeah
      */
-    public ShearableSheepEntityRenderer(EntityRendererFactory.Context context) {
-        super(
-                context,
-                new SheepEntityModel(context.getPart(EntityModelLayers.SHEEP)),
-                new SheepEntityModel(context.getPart(EntityModelLayers.SHEEP_BABY)),
-                0.7F
-        );
-        this.addFeature(new SheepWoolFeatureRenderer(this, context.getEntityModels()));
-        this.addFeature(new BetterUndercoatRenderer(this, context.getEntityModels()));
+    public ShearableSheepEntityRenderer(EntityRendererProvider.Context context) {
+        super(context);
     }
 
     /**
-     * Subclass that stores the sheep entity
+     * Subclass that stores the shear states safely for the render thread
      */
-    public static class ShearableSheepRenderState extends SheepEntityRenderState {
-        public SheepEntity sheepEntity;
+    public static class ShearableSheepRenderState extends SheepRenderState {
+        public boolean isButchered;
     }
 
     /**
-     * @return Sheep render state
+     * @return Custom Sheep render state
      */
     @Override
-    public SheepEntityRenderState createRenderState() {
+    public SheepRenderState createRenderState() {
         return new ShearableSheepRenderState();
     }
 
     /**
-     * Updates the sheep's render state
+     * Extracts variables from the sheep entity safely into the render state
      *
      * @param sheep     This sheep
      * @param state     The sheep's state
      * @param tickDelta Tick number
      */
     @Override
-    public void updateRenderState(SheepEntity sheep, SheepEntityRenderState state, float tickDelta) {
-        super.updateRenderState(sheep, state, tickDelta);
-        state.headAngle = sheep.getHeadAngle(tickDelta);
-        state.neckAngle = sheep.getNeckAngle(tickDelta);
-        state.sheared = sheep.isSheared();
-        state.color = sheep.getColor();
-        state.rainbow = nameEquals(sheep, "jeb_");
-        ((ShearableSheepRenderState) state).sheepEntity = sheep;
+    public void extractRenderState(Sheep sheep, SheepRenderState state, float tickDelta) {
+        super.extractRenderState(sheep, state, tickDelta);
+        ShearableSheepRenderState shearableState = (ShearableSheepRenderState) state;
+        shearableState.isButchered = sheep.getEntityData().get(IS_SHEEP_BUTCHERED);
+        if (shearableState.isButchered) {
+            // Force the state to WHITE so the vanilla engine doesn't tint the skeleton
+            // Unless it's jeb_ then it breaks everything UGGHHHHHH
+            state.woolColor = net.minecraft.world.item.DyeColor.WHITE;
+        }
     }
 
     /**
@@ -90,12 +74,11 @@ public class ShearableSheepEntityRenderer extends AgeableMobEntityRenderer<Sheep
      * @return Texture, depending on the sheep's shear-state
      */
     @Override
-    public Identifier getTexture(SheepEntityRenderState state) {
-        SheepEntity sheep = ((ShearableSheepRenderState) state).sheepEntity;
-        if (sheep.getDataTracker().get(IS_SHEEP_BUTCHERED)) {
+    public Identifier getTextureLocation(SheepRenderState state) {
+        ShearableSheepRenderState shearableState = (ShearableSheepRenderState) state;
+        if (!shearableState.isBaby && shearableState.isButchered) {
             return BUTCHERED_TEXTURE;
         }
-        return NORMAL_TEXTURE;
+        return super.getTextureLocation(state);
     }
 }
-

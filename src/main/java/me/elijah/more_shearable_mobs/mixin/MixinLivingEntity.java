@@ -3,33 +3,28 @@
  * available to certain mob classes in particular.
  *
  * @author Elijah Potter
- * @date 10/10/2025
+ * @date 03/25/2026
  */
 
 package me.elijah.more_shearable_mobs.mixin;
 
-import me.elijah.more_shearable_mobs.More_shearable_mobs;
-import net.minecraft.enchantment.Enchantment;
-import net.minecraft.enchantment.EnchantmentHelper;
-import net.minecraft.enchantment.Enchantments;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.data.DataTracker;
-import net.minecraft.entity.passive.ChickenEntity;
-import net.minecraft.entity.passive.CowEntity;
-import net.minecraft.entity.passive.PigEntity;
-import net.minecraft.entity.passive.SheepEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
+import net.minecraft.core.Holder;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.DamageTypeTags;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.animal.chicken.Chicken;
+import net.minecraft.world.entity.animal.cow.Cow;
+import net.minecraft.world.entity.animal.pig.Pig;
+import net.minecraft.world.entity.animal.sheep.Sheep;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.item.enchantment.Enchantments;
 
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.registry.tag.DamageTypeTags;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.storage.ReadView;
-import net.minecraft.storage.WriteView;
-import net.minecraft.text.Text;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -42,189 +37,131 @@ import static me.elijah.more_shearable_mobs.ShearDataTrackers.*;
 public class MixinLivingEntity {
 
     /**
-     * Adds custom data trackers to mobs (chickens)
-     *
-     * @param builder Data tracker
-     * @param ci      Unused
-     */
-    @Inject(method = "initDataTracker", at = @At("TAIL"))
-    private void injectMobShearedTracker(DataTracker.Builder builder, CallbackInfo ci) {
-        if ((Object) this instanceof ChickenEntity) {
-            builder.add(IS_CHICK_SHEARED, false);
-            builder.add(IS_CHICK_BUTCHERED, false);
-            builder.add(REGROW_CHICK_TIMER, 0);
-            builder.add(REGEN_CHICK_TIMER, 0);
-        }
-    }
-
-    /**
      * Every tick, the mob's timer is checked and decremented
      * until 0 to restore the skin.
      *
      * @param ci Unused
      */
-    @Inject(method = "tick", at = @At("HEAD"))
+    @Inject(method = "tick", at = @At("HEAD"), remap = false)
     private void onTick(CallbackInfo ci) {
-        if ((Object) this instanceof CowEntity cow) {
+        if ((Object) this instanceof Cow cow) {
 //            cow.setCustomName(Text.literal("Regen: " + (cow.getDataTracker().get(REGEN_COW_TIMER) / 20) + "s   " + "Regrow: " + (cow.getDataTracker().get(REGROW_COW_TIMER) / 20) + "s"));
 //            cow.setCustomNameVisible(true);
-            if (cow.getDataTracker().get(IS_COW_BUTCHERED)) {
-                int ticks = cow.getDataTracker().get(REGEN_COW_TIMER);
+            if (cow.getEntityData().get(IS_COW_BUTCHERED)) {
+                int ticks = cow.getEntityData().get(REGEN_COW_TIMER);
                 if (ticks > 0) {
-                    cow.getDataTracker().set(REGEN_COW_TIMER, ticks - 1);
+                    cow.getEntityData().set(REGEN_COW_TIMER, ticks - 1);
                 } else {
-                    cow.getDataTracker().set(IS_COW_BUTCHERED, false);
+                    cow.getEntityData().set(IS_COW_BUTCHERED, false);
                 }
-            } else if (cow.getDataTracker().get(IS_COW_SHEARED)) {
-                int ticks = cow.getDataTracker().get(REGROW_COW_TIMER);
+            } else if (cow.getEntityData().get(IS_COW_SHEARED)) {
+                int ticks = cow.getEntityData().get(REGROW_COW_TIMER);
                 if (ticks > 0) {
-                    cow.getDataTracker().set(REGROW_COW_TIMER, ticks - 1);
+                    cow.getEntityData().set(REGROW_COW_TIMER, ticks - 1);
                 } else {
-                    cow.getDataTracker().set(IS_COW_SHEARED, false);
-                }
-            }
-        } else if ((Object) this instanceof ChickenEntity chick) {
-            if (chick.getDataTracker().get(IS_CHICK_BUTCHERED)) {
-                int ticks = chick.getDataTracker().get(REGEN_CHICK_TIMER);
-                if (ticks > 0) {
-                    chick.getDataTracker().set(REGEN_CHICK_TIMER, ticks - 1);
-                } else {
-                    chick.getDataTracker().set(IS_CHICK_BUTCHERED, false);
-                }
-            } else if (chick.getDataTracker().get(IS_CHICK_SHEARED)) {
-                int ticks = chick.getDataTracker().get(REGROW_CHICK_TIMER);
-                if (ticks > 0) {
-                    chick.getDataTracker().set(REGROW_CHICK_TIMER, ticks - 1);
-                } else {
-                    chick.getDataTracker().set(IS_CHICK_SHEARED, false);
+                    cow.getEntityData().set(IS_COW_SHEARED, false);
                 }
             }
-        } else if ((Object) this instanceof PigEntity pig) {
-            if (pig.getDataTracker().get(IS_PIG_BUTCHERED)) {
-                int ticks = pig.getDataTracker().get(REGEN_PIG_TIMER);
+        } else if ((Object) this instanceof Chicken chick) {
+            if (chick.getEntityData().get(IS_CHICK_BUTCHERED)) {
+                int ticks = chick.getEntityData().get(REGEN_CHICK_TIMER);
                 if (ticks > 0) {
-                    pig.getDataTracker().set(REGEN_PIG_TIMER, ticks - 1);
+                    chick.getEntityData().set(REGEN_CHICK_TIMER, ticks - 1);
                 } else {
-                    pig.getDataTracker().set(IS_PIG_BUTCHERED, false);
+                    chick.getEntityData().set(IS_CHICK_BUTCHERED, false);
+                }
+            } else if (chick.getEntityData().get(IS_CHICK_SHEARED)) {
+                int ticks = chick.getEntityData().get(REGROW_CHICK_TIMER);
+                if (ticks > 0) {
+                    chick.getEntityData().set(REGROW_CHICK_TIMER, ticks - 1);
+                } else {
+                    chick.getEntityData().set(IS_CHICK_SHEARED, false);
                 }
             }
-        } else if ((Object) this instanceof SheepEntity sheep) {
-            if (sheep.getDataTracker().get(IS_SHEEP_BUTCHERED)) {
-                int ticks = sheep.getDataTracker().get(REGEN_SHEEP_TIMER);
+        } else if ((Object) this instanceof Pig pig) {
+            if (pig.getEntityData().get(IS_PIG_BUTCHERED)) {
+                int ticks = pig.getEntityData().get(REGEN_PIG_TIMER);
                 if (ticks > 0) {
-                    sheep.getDataTracker().set(REGEN_SHEEP_TIMER, ticks - 1);
+                    pig.getEntityData().set(REGEN_PIG_TIMER, ticks - 1);
                 } else {
-                    sheep.getDataTracker().set(IS_SHEEP_BUTCHERED, false);
+                    pig.getEntityData().set(IS_PIG_BUTCHERED, false);
                 }
             }
-        }
-    }
-
-    /**
-     * Writes custom NBT data about mobs (chickens) and their shear-states
-     * to persist between loads
-     *
-     * @param nbt NBT writer
-     * @param ci  Unused
-     */
-    @Inject(method = "writeCustomData", at = @At("TAIL"))
-    private void onWriteNbt(WriteView nbt, CallbackInfo ci) {
-        try {
-            if ((Object) this instanceof ChickenEntity chick) {
-                nbt.putBoolean("IsChickSheared", chick.getDataTracker().get(IS_CHICK_SHEARED));
-                nbt.putBoolean("IsChickButchered", chick.getDataTracker().get(IS_CHICK_BUTCHERED));
-                nbt.putInt("RegrowChickTicks", chick.getDataTracker().get(REGROW_CHICK_TIMER));
-                nbt.putInt("RegenChickTicks", chick.getDataTracker().get(REGEN_CHICK_TIMER));
+        } else if ((Object) this instanceof Sheep sheep) {
+            if (sheep.getEntityData().get(IS_SHEEP_BUTCHERED)) {
+                int ticks = sheep.getEntityData().get(REGEN_SHEEP_TIMER);
+                if (ticks > 0) {
+                    sheep.getEntityData().set(REGEN_SHEEP_TIMER, ticks - 1);
+                } else {
+                    sheep.getEntityData().set(IS_SHEEP_BUTCHERED, false);
+                }
             }
-        } catch (Exception e) {
-            More_shearable_mobs.LOGGER.error("Failed to write chicken NBT", e);
-        }
-    }
-
-    /**
-     * Reads custom NBT data about mobs (chickens) and their shear-states
-     * to persist between loads
-     *
-     * @param nbt NBT writer
-     * @param ci  Unused
-     */
-    @Inject(method = "readCustomData", at = @At("TAIL"))
-    private void onReadNbt(ReadView nbt, CallbackInfo ci) {
-        try {
-            if ((Object) this instanceof ChickenEntity chick) {
-                chick.getDataTracker().set(IS_CHICK_SHEARED, nbt.getBoolean("IsChickSheared", false));
-                chick.getDataTracker().set(IS_CHICK_BUTCHERED, nbt.getBoolean("IsChickButchered", false));
-                chick.getDataTracker().set(REGROW_CHICK_TIMER, nbt.getInt("RegrowChickTicks", 0));
-                chick.getDataTracker().set(REGEN_CHICK_TIMER, nbt.getInt("RegenChickTicks", 0));
-            }
-        } catch (Exception e) {
-            More_shearable_mobs.LOGGER.error("Failed to read chicken NBT", e);
         }
     }
 
     /**
      * Modifies the mob's loot drops depending on its state
      *
-     * @param world          The current world
+     * @param level          The current world
      * @param damageSource   Where the damage is coming from
      * @param causedByPlayer Whether the damage is caused by the player
      * @param ci             Callback Info
      */
-    @Inject(method = "dropLoot", at = @At("HEAD"), cancellable = true)
-    private void modifyDrops(ServerWorld world, DamageSource damageSource, boolean causedByPlayer, CallbackInfo ci) {
+    @Inject(method = "dropFromLootTable", at = @At("HEAD"), cancellable = true, remap = false)
+    private void modifyDrops(ServerLevel level, DamageSource damageSource, boolean causedByPlayer, CallbackInfo ci) {
         if ((Object) this instanceof LivingEntity mob) {
             int dropCount = determineDropCount(mob);
             ItemStack goodieStack;
 
             // Fire aspect check
             boolean killedByFireAspect = false;
-            if (damageSource.getAttacker() instanceof LivingEntity attacker) {
-                ItemStack weapon = attacker.getMainHandStack();
-                RegistryEntry<Enchantment> fireAspect = world.getRegistryManager().getOrThrow(RegistryKeys.ENCHANTMENT).getOrThrow(Enchantments.FIRE_ASPECT);
-                if (EnchantmentHelper.getLevel(fireAspect, weapon) > 0) {
+            if (damageSource.getEntity() instanceof LivingEntity attacker) {
+                ItemStack weapon = attacker.getMainHandItem();
+                Holder<Enchantment> fireAspect = level.registryAccess().lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.FIRE_ASPECT);
+                if (EnchantmentHelper.getItemEnchantmentLevel(fireAspect, weapon) > 0) {
                     killedByFireAspect = true;
                 }
             }
 
             // Looting check
             int lootingLvl = 0;
-            if (damageSource.getAttacker() instanceof LivingEntity attacker) {
-                ItemStack weapon = attacker.getMainHandStack();
-                RegistryEntry<Enchantment> loot = world.getRegistryManager().getOrThrow(RegistryKeys.ENCHANTMENT).getOrThrow(Enchantments.LOOTING);
-                lootingLvl = EnchantmentHelper.getLevel(loot, weapon);
+            if (damageSource.getEntity() instanceof LivingEntity attacker) {
+                ItemStack weapon = attacker.getMainHandItem();
+                Holder<Enchantment> loot = level.registryAccess().lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.LOOTING);
+                lootingLvl = EnchantmentHelper.getItemEnchantmentLevel(loot, weapon);
             }
 
             dropCount += lootingLvl;
 
-            if (mob instanceof CowEntity cow) {
-                if (cow.getDataTracker().get(IS_COW_BUTCHERED))
+            if (mob instanceof Cow cow) {
+                if (cow.getEntityData().get(IS_COW_BUTCHERED))
                     goodieStack = new ItemStack(Items.BONE, dropCount);
-                else if (cow.getDataTracker().get(IS_COW_SHEARED) && (damageSource.isIn(DamageTypeTags.IS_FIRE) || cow.isOnFire() || killedByFireAspect))
+                else if (cow.getEntityData().get(IS_COW_SHEARED) && (damageSource.is(DamageTypeTags.IS_FIRE) || cow.isOnFire() || killedByFireAspect))
                     goodieStack = new ItemStack(Items.COOKED_BEEF, dropCount);
-                else if (cow.getDataTracker().get(IS_COW_SHEARED))
+                else if (cow.getEntityData().get(IS_COW_SHEARED))
                     goodieStack = new ItemStack(Items.BEEF, dropCount);
                 else return;
-            } else if (mob instanceof ChickenEntity chick) {
-                if (chick.getDataTracker().get(IS_CHICK_BUTCHERED))
+            } else if (mob instanceof Chicken chick) {
+                if (chick.getEntityData().get(IS_CHICK_BUTCHERED))
                     goodieStack = new ItemStack(Items.BONE, dropCount);
-                else if (chick.getDataTracker().get(IS_CHICK_SHEARED) && (damageSource.isIn(DamageTypeTags.IS_FIRE) || chick.isOnFire() || killedByFireAspect))
+                else if (chick.getEntityData().get(IS_CHICK_SHEARED) && (damageSource.is(DamageTypeTags.IS_FIRE) || chick.isOnFire() || killedByFireAspect))
                     goodieStack = new ItemStack(Items.COOKED_CHICKEN, 1 + lootingLvl);
-                else if (chick.getDataTracker().get(IS_CHICK_SHEARED))
+                else if (chick.getEntityData().get(IS_CHICK_SHEARED))
                     goodieStack = new ItemStack(Items.CHICKEN, 1 + lootingLvl);
                 else return;
-            } else if (mob instanceof PigEntity pig) {
-                if (pig.getDataTracker().get(IS_PIG_BUTCHERED))
+            } else if (mob instanceof Pig pig) {
+                if (pig.getEntityData().get(IS_PIG_BUTCHERED))
                     goodieStack = new ItemStack(Items.BONE, dropCount);
                 else return;
-            } else if (mob instanceof SheepEntity sheep) {
-                if (sheep.getDataTracker().get(IS_SHEEP_BUTCHERED))
+            } else if (mob instanceof Sheep sheep) {
+                if (sheep.getEntityData().get(IS_SHEEP_BUTCHERED))
                     goodieStack = new ItemStack(Items.BONE, dropCount);
                 else return;
             } else return;
 
-            ItemEntity drop = new ItemEntity(world, mob.getX(), mob.getY() + 1, mob.getZ(), goodieStack);
-            world.spawnEntity(drop);
-            drop.setVelocity(drop.getVelocity().add((mob.getRandom().nextFloat() - mob.getRandom().nextFloat()) * 0.1F, mob.getRandom().nextFloat() * 0.05F, (mob.getRandom().nextFloat() - mob.getRandom().nextFloat()) * 0.1F));
+            ItemEntity drop = new ItemEntity(level, mob.getX(), mob.getY() + 1, mob.getZ(), goodieStack);
+            level.addFreshEntity(drop);
+            drop.setDeltaMovement(drop.getDeltaMovement().add((mob.getRandom().nextFloat() - mob.getRandom().nextFloat()) * 0.1F, mob.getRandom().nextFloat() * 0.05F, (mob.getRandom().nextFloat() - mob.getRandom().nextFloat()) * 0.1F));
             ci.cancel(); // Prevent normal loot from dropping
         }
     }
@@ -246,4 +183,3 @@ public class MixinLivingEntity {
         }
     }
 }
-

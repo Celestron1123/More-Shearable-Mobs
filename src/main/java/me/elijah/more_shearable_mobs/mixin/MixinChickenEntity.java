@@ -1,37 +1,36 @@
 /**
- * Main Mixin methods for chicken-shearing logic
+ * Main Mixin methods for chicken-shearing logic. Some of them, anyway...
  *
  * @author Elijah Potter
- * @date 10/10/2025
+ * @date 03/26/2026
  */
 
 package me.elijah.more_shearable_mobs.mixin;
 
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.entity.Shearable;
-import net.minecraft.entity.passive.AnimalEntity;
-import net.minecraft.entity.passive.ChickenEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
+import me.elijah.more_shearable_mobs.More_shearable_mobs;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.Shearable;
+import net.minecraft.world.entity.animal.chicken.Chicken;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 
-import net.minecraft.world.World;
+import org.jetbrains.annotations.NotNull;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import static me.elijah.more_shearable_mobs.ShearDataTrackers.*;
 
-@Mixin(AnimalEntity.class)
+@Mixin(Chicken.class)
 public class MixinChickenEntity implements Shearable {
 
     /**
@@ -40,10 +39,8 @@ public class MixinChickenEntity implements Shearable {
      * @return This chicken
      */
     @Unique
-    private ChickenEntity thisChicken() {
-        if ((Object) this instanceof ChickenEntity chicken)
-            return chicken;
-        else return null;
+    private Chicken thisChicken() {
+        return (Chicken) (Object) this;
     }
 
     /**
@@ -52,19 +49,9 @@ public class MixinChickenEntity implements Shearable {
      * @return Whether a chicken is in a shearable state
      */
     @Override
-    public boolean isShearable() {
+    public boolean readyForShearing() {
         if (thisChicken() != null)
             return thisChicken().isAlive() && !isSheared() && !thisChicken().isBaby();
-        else return false;
-    }
-
-    /**
-     * @return Whether a chicken is in a butcherable state
-     */
-    @Unique
-    public boolean isButcherable() {
-        if (thisChicken() != null)
-            return thisChicken().isAlive() && isSheared() && !isButchered() && !thisChicken().isBaby();
         else return false;
     }
 
@@ -74,17 +61,7 @@ public class MixinChickenEntity implements Shearable {
     @Unique
     public boolean isSheared() {
         if (thisChicken() != null)
-            return thisChicken().getDataTracker().get(IS_CHICK_SHEARED);
-        else return false;
-    }
-
-    /**
-     * @return Whether a chicken is butchered
-     */
-    @Unique
-    public boolean isButchered() {
-        if (thisChicken() != null)
-            return thisChicken().getDataTracker().get(IS_CHICK_BUTCHERED);
+            return thisChicken().getEntityData().get(IS_CHICK_SHEARED);
         else return false;
     }
 
@@ -96,25 +73,9 @@ public class MixinChickenEntity implements Shearable {
     @Unique
     public void setSheared(boolean sheared) {
         if (thisChicken() != null) {
-            thisChicken().getDataTracker().set(IS_CHICK_SHEARED, sheared);
+            thisChicken().getEntityData().set(IS_CHICK_SHEARED, sheared);
             if (sheared) {
-                thisChicken().getDataTracker().set(REGROW_CHICK_TIMER, sampleRegrowTimer(thisChicken().getRandom()));
-            }
-        }
-    }
-
-    /**
-     * Sets the butcher state of a chicken
-     *
-     * @param butchered Whether the chicken is butchered
-     */
-    @Unique
-    public void setButchered(boolean butchered) {
-        if (thisChicken() != null) {
-            thisChicken().getDataTracker().set(IS_CHICK_BUTCHERED, butchered);
-            if (butchered) {
-                thisChicken().getDataTracker().set(REGEN_CHICK_TIMER, sampleRegrowTimer(thisChicken().getRandom()));
-                thisChicken().getDataTracker().set(REGROW_CHICK_TIMER, sampleRegrowTimer(thisChicken().getRandom()));
+                thisChicken().getEntityData().set(REGROW_CHICK_TIMER, sampleRegrowTimer(thisChicken().getRandom()));
             }
         }
     }
@@ -131,7 +92,7 @@ public class MixinChickenEntity implements Shearable {
      * @return an integer that follows the prescribed bell curve
      */
     @Unique
-    private int sampleRegrowTimer(Random random) {
+    private int sampleRegrowTimer(RandomSource random) {
         double mean = 1000;  // 50 seconds = 1000 ticks
         double stdDev = 300;
         double sample;
@@ -150,31 +111,14 @@ public class MixinChickenEntity implements Shearable {
      * @param shears               The player's shears
      */
     @Override
-    public void sheared(ServerWorld world, SoundCategory shearedSoundCategory, ItemStack shears) {
-        world.playSoundFromEntity(null, thisChicken(), SoundEvents.ENTITY_SHEEP_SHEAR, shearedSoundCategory, 1.0F, 1.0F);
+    public void shear(ServerLevel world, @NotNull SoundSource shearedSoundCategory, @NotNull ItemStack shears) {
+        world.playSound(null, thisChicken(), SoundEvents.SHEEP_SHEAR, shearedSoundCategory, 1.0F, 1.0F);
         setSheared(true);
         int dropCount = determineDropCount();
         ItemStack leatherStack = new ItemStack(Items.FEATHER, dropCount);
         ItemEntity drop = new ItemEntity(world, thisChicken().getX(), thisChicken().getY() + 1, thisChicken().getZ(), leatherStack);
-        world.spawnEntity(drop);
-        drop.setVelocity(drop.getVelocity().add((thisChicken().getRandom().nextFloat() - thisChicken().getRandom().nextFloat()) * 0.1F, thisChicken().getRandom().nextFloat() * 0.05F, (thisChicken().getRandom().nextFloat() - thisChicken().getRandom().nextFloat()) * 0.1F));
-    }
-
-    /**
-     * Method that performs the actual butchering to the chicken.
-     *
-     * @param world                The current world
-     * @param shearedSoundCategory The sound of the shear
-     */
-    @Unique
-    public void butchered(ServerWorld world, SoundCategory shearedSoundCategory) {
-        world.playSoundFromEntity(null, thisChicken(), SoundEvents.ENTITY_SLIME_SQUISH, shearedSoundCategory, 1.0F, 1.0F);
-        setButchered(true);
-        int dropCount = 1;
-        ItemStack beefStack = new ItemStack(Items.CHICKEN, dropCount);
-        ItemEntity drop = new ItemEntity(world, thisChicken().getX(), thisChicken().getY() + 1, thisChicken().getZ(), beefStack);
-        world.spawnEntity(drop);
-        drop.setVelocity(drop.getVelocity().add((thisChicken().getRandom().nextFloat() - thisChicken().getRandom().nextFloat()) * 0.1F, thisChicken().getRandom().nextFloat() * 0.05F, (thisChicken().getRandom().nextFloat() - thisChicken().getRandom().nextFloat()) * 0.1F));
+        world.addFreshEntity(drop);
+        drop.setDeltaMovement(drop.getDeltaMovement().add((thisChicken().getRandom().nextFloat() - thisChicken().getRandom().nextFloat()) * 0.1F, thisChicken().getRandom().nextFloat() * 0.05F, (thisChicken().getRandom().nextFloat() - thisChicken().getRandom().nextFloat()) * 0.1F));
     }
 
     /**
@@ -194,33 +138,59 @@ public class MixinChickenEntity implements Shearable {
         }
     }
 
+    // ================ Moved over from Living Entity Mixin :) ===================================
+
     /**
-     * Handles the logic for when a player interacts with a chicken using shears
+     * Adds custom data trackers to chickens
      *
-     * @param player Current player
-     * @param hand   The player's hand
-     * @param cir    Reports success of method
+     * @param builder Data tracker
+     * @param ci      Unused
      */
-    @Inject(method = "interactMob", at = @At("HEAD"), cancellable = true)
-    private void onInteract(PlayerEntity player, Hand hand, CallbackInfoReturnable<ActionResult> cir) {
-        if ((Object) this instanceof ChickenEntity chicken) {
-            ItemStack itemStack = player.getStackInHand(hand);
-            if (itemStack.isOf(Items.SHEARS)) {
-                World var5 = chicken.getEntityWorld();
-                if (var5 instanceof ServerWorld serverWorld) {
-                    if (this.isButcherable()) {
-                        this.butchered(serverWorld, SoundCategory.PLAYERS);
-                        itemStack.damage(1, player, hand == Hand.MAIN_HAND ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND);
-                        player.swingHand(hand, true);
-                        cir.setReturnValue(ActionResult.SUCCESS);
-                    } else if (this.isShearable()) {
-                        this.sheared(serverWorld, SoundCategory.PLAYERS, itemStack);
-                        itemStack.damage(1, player, hand == Hand.MAIN_HAND ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND);
-                        player.swingHand(hand, true);
-                        cir.setReturnValue(ActionResult.SUCCESS);
-                    }
-                }
-            }
+    @Inject(method = "defineSynchedData", at = @At("TAIL"), remap = false)
+    private void injectMobShearedTracker(SynchedEntityData.Builder builder, CallbackInfo ci) {
+        builder.define(IS_CHICK_SHEARED, false);
+        builder.define(IS_CHICK_BUTCHERED, false);
+        builder.define(REGROW_CHICK_TIMER, 0);
+        builder.define(REGEN_CHICK_TIMER, 0);
+    }
+
+    /**
+     * Writes custom NBT data about chickens and their shear-states
+     * to persist between loads
+     *
+     * @param output Data writer
+     * @param ci     Unused
+     */
+    @Inject(method = "addAdditionalSaveData", at = @At("TAIL"), remap = false)
+    private void onWriteNbt(ValueOutput output, CallbackInfo ci) {
+        try {
+            output.putBoolean("IsChickSheared", thisChicken().getEntityData().get(IS_CHICK_SHEARED));
+            output.putBoolean("IsChickButchered", thisChicken().getEntityData().get(IS_CHICK_BUTCHERED));
+            output.putInt("RegrowChickTicks", thisChicken().getEntityData().get(REGROW_CHICK_TIMER));
+            output.putInt("RegenChickTicks", thisChicken().getEntityData().get(REGEN_CHICK_TIMER));
+
+        } catch (Exception e) {
+            More_shearable_mobs.LOGGER.error("Failed to write chicken NBT", e);
+        }
+    }
+
+    /**
+     * Reads custom NBT data about chickens and their shear-states
+     * to persist between loads
+     *
+     * @param input Data reader
+     * @param ci    Unused
+     */
+    @Inject(method = "readAdditionalSaveData", at = @At("TAIL"), remap = false)
+    private void onReadNbt(ValueInput input, CallbackInfo ci) {
+        try {
+            thisChicken().getEntityData().set(IS_CHICK_SHEARED, input.getBooleanOr("IsChickSheared", false));
+            thisChicken().getEntityData().set(IS_CHICK_BUTCHERED, input.getBooleanOr("IsChickButchered", false));
+            thisChicken().getEntityData().set(REGROW_CHICK_TIMER, input.getIntOr("RegrowChickTicks", 0));
+            thisChicken().getEntityData().set(REGEN_CHICK_TIMER, input.getIntOr("RegenChickTicks", 0));
+
+        } catch (Exception e) {
+            More_shearable_mobs.LOGGER.error("Failed to read chicken NBT", e);
         }
     }
 }

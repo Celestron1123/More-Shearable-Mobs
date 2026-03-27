@@ -2,28 +2,28 @@
  * Main Mixin methods for sheep-butchering logic
  *
  * @author Elijah Potter
- * @date 10/10/2025
+ * @date 03/26/2026
  */
 
 package me.elijah.more_shearable_mobs.mixin;
 
 import me.elijah.more_shearable_mobs.More_shearable_mobs;
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.entity.data.DataTracker;
-import net.minecraft.entity.passive.SheepEntity;
-import net.minecraft.storage.ReadView;
-import net.minecraft.storage.WriteView;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.world.World;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.animal.sheep.Sheep;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -34,7 +34,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import static me.elijah.more_shearable_mobs.ShearDataTrackers.*;
 
-@Mixin(SheepEntity.class)
+@Mixin(Sheep.class)
 public class MixinSheepEntity {
 
     /**
@@ -43,8 +43,8 @@ public class MixinSheepEntity {
      * @return This sheep
      */
     @Unique
-    private SheepEntity thisSheep() {
-        return (SheepEntity) (Object) this;
+    private Sheep thisSheep() {
+        return (Sheep) (Object) this;
     }
 
     /**
@@ -60,7 +60,7 @@ public class MixinSheepEntity {
      */
     @Unique
     public boolean isButchered() {
-        return thisSheep().getDataTracker().get(IS_SHEEP_BUTCHERED);
+        return thisSheep().getEntityData().get(IS_SHEEP_BUTCHERED);
     }
 
     /**
@@ -70,9 +70,9 @@ public class MixinSheepEntity {
      */
     @Unique
     public void setButchered(boolean butchered) {
-        thisSheep().getDataTracker().set(IS_SHEEP_BUTCHERED, butchered);
+        thisSheep().getEntityData().set(IS_SHEEP_BUTCHERED, butchered);
         if (butchered) {
-            thisSheep().getDataTracker().set(REGEN_SHEEP_TIMER, sampleRegrowTimer(thisSheep().getRandom()));
+            thisSheep().getEntityData().set(REGEN_SHEEP_TIMER, sampleRegrowTimer(thisSheep().getRandom()));
         }
     }
 
@@ -88,7 +88,7 @@ public class MixinSheepEntity {
      * @return an integer that follows the prescribed bell curve
      */
     @Unique
-    private int sampleRegrowTimer(Random random) {
+    private int sampleRegrowTimer(RandomSource random) {
         double mean = 1000;  // 50 seconds = 1000 ticks
         double stdDev = 300;
         double sample;
@@ -102,18 +102,18 @@ public class MixinSheepEntity {
     /**
      * Method that performs the actual butchering to the sheep.
      *
-     * @param world                The current world
+     * @param level                The current world
      * @param shearedSoundCategory The sound of the shear
      */
     @Unique
-    public void butchered(ServerWorld world, SoundCategory shearedSoundCategory) {
-        world.playSoundFromEntity(null, thisSheep(), SoundEvents.ENTITY_SLIME_SQUISH, shearedSoundCategory, 1.0F, 1.0F);
+    public void butchered(ServerLevel level, SoundSource shearedSoundCategory) {
+        level.playSound(null, thisSheep(), SoundEvents.SLIME_SQUISH, shearedSoundCategory, 1.0F, 1.0F);
         setButchered(true);
         int dropCount = determineDropCount();
         ItemStack beefStack = new ItemStack(Items.MUTTON, dropCount);
-        ItemEntity drop = new ItemEntity(world, thisSheep().getX(), thisSheep().getY() + 1, thisSheep().getZ(), beefStack);
-        world.spawnEntity(drop);
-        drop.setVelocity(drop.getVelocity().add((thisSheep().getRandom().nextFloat() - thisSheep().getRandom().nextFloat()) * 0.1F, thisSheep().getRandom().nextFloat() * 0.05F, (thisSheep().getRandom().nextFloat() - thisSheep().getRandom().nextFloat()) * 0.1F));
+        ItemEntity drop = new ItemEntity(level, thisSheep().getX(), thisSheep().getY() + 1, thisSheep().getZ(), beefStack);
+        level.addFreshEntity(drop);
+        drop.setDeltaMovement(drop.getDeltaMovement().add((thisSheep().getRandom().nextFloat() - thisSheep().getRandom().nextFloat()) * 0.1F, thisSheep().getRandom().nextFloat() * 0.05F, (thisSheep().getRandom().nextFloat() - thisSheep().getRandom().nextFloat()) * 0.1F));
     }
 
     /**
@@ -140,17 +140,18 @@ public class MixinSheepEntity {
      * @param hand   The player's hand
      * @param cir    Reports success of method
      */
-    @Inject(method = "interactMob", at = @At("HEAD"), cancellable = true)
-    private void onInteract(PlayerEntity player, Hand hand, CallbackInfoReturnable<ActionResult> cir) {
-        ItemStack itemStack = player.getStackInHand(hand);
-        if (itemStack.isOf(Items.SHEARS)) {
-            World var5 = thisSheep().getEntityWorld();
-            if (var5 instanceof ServerWorld serverWorld) {
+    @Inject(method = "mobInteract", at = @At("HEAD"), cancellable = true, remap = false)
+    private void onInteract(Player player, InteractionHand hand, CallbackInfoReturnable<InteractionResult> cir) {
+        ItemStack itemStack = player.getItemInHand(hand);
+        if (itemStack.is(Items.SHEARS)) {
+            Level level = thisSheep().level();
+            if (level instanceof ServerLevel serverLevel) {
+                // Only intercept if we are butchering it. Otherwise, let vanilla handle the wool shearing.
                 if (this.isButcherable()) {
-                    this.butchered(serverWorld, SoundCategory.PLAYERS);
-                    itemStack.damage(1, player, hand == Hand.MAIN_HAND ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND);
-                    player.swingHand(hand, true);
-                    cir.setReturnValue(ActionResult.SUCCESS);
+                    this.butchered(serverLevel, SoundSource.PLAYERS);
+                    itemStack.hurtAndBreak(1, player, hand == InteractionHand.MAIN_HAND ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND);
+                    player.swing(hand, true);
+                    cir.setReturnValue(InteractionResult.SUCCESS);
                 }
             }
         }
@@ -162,24 +163,24 @@ public class MixinSheepEntity {
      * @param builder Data tracker
      * @param ci      Unused
      */
-    @Inject(method = "initDataTracker", at = @At("TAIL"))
-    private void injectMobShearedTracker(DataTracker.Builder builder, CallbackInfo ci) {
-        builder.add(IS_SHEEP_BUTCHERED, false);
-        builder.add(REGEN_SHEEP_TIMER, 0);
+    @Inject(method = "defineSynchedData", at = @At("TAIL"), remap = false)
+    private void injectMobShearedTracker(SynchedEntityData.Builder builder, CallbackInfo ci) {
+        builder.define(IS_SHEEP_BUTCHERED, false);
+        builder.define(REGEN_SHEEP_TIMER, 0);
     }
 
     /**
      * Writes custom NBT data about sheep and their shear-states
      * to persist between loads
      *
-     * @param nbt NBT writer
-     * @param ci  Unused
+     * @param output NBT writer
+     * @param ci     Unused
      */
-    @Inject(method = "writeCustomData", at = @At("TAIL"))
-    private void onWriteNbt(WriteView nbt, CallbackInfo ci) {
+    @Inject(method = "addAdditionalSaveData", at = @At("TAIL"), remap = false)
+    private void onWriteNbt(ValueOutput output, CallbackInfo ci) {
         try {
-            nbt.putBoolean("IsSheepButchered", thisSheep().getDataTracker().get(IS_SHEEP_BUTCHERED));
-            nbt.putInt("RegenSheepTicks", thisSheep().getDataTracker().get(REGEN_SHEEP_TIMER));
+            output.putBoolean("IsSheepButchered", thisSheep().getEntityData().get(IS_SHEEP_BUTCHERED));
+            output.putInt("RegenSheepTicks", thisSheep().getEntityData().get(REGEN_SHEEP_TIMER));
         } catch (Exception e) {
             More_shearable_mobs.LOGGER.error("Failed to write sheep NBT", e);
         }
@@ -189,14 +190,14 @@ public class MixinSheepEntity {
      * Reads custom NBT data about sheep and their shear-states
      * to persist between loads
      *
-     * @param nbt NBT writer
-     * @param ci  Unused
+     * @param input NBT writer
+     * @param ci    Unused
      */
-    @Inject(method = "readCustomData", at = @At("TAIL"))
-    private void onReadNbt(ReadView nbt, CallbackInfo ci) {
+    @Inject(method = "readAdditionalSaveData", at = @At("TAIL"), remap = false)
+    private void onReadNbt(ValueInput input, CallbackInfo ci) {
         try {
-            thisSheep().getDataTracker().set(IS_SHEEP_BUTCHERED, nbt.getBoolean("IsSheepButchered", false));
-            thisSheep().getDataTracker().set(REGEN_SHEEP_TIMER, nbt.getInt("RegenSheepTicks", 0));
+            thisSheep().getEntityData().set(IS_SHEEP_BUTCHERED, input.getBooleanOr("IsSheepButchered", false));
+            thisSheep().getEntityData().set(REGEN_SHEEP_TIMER, input.getIntOr("RegenSheepTicks", 0));
         } catch (Exception e) {
             More_shearable_mobs.LOGGER.error("Failed to read sheep NBT", e);
         }
